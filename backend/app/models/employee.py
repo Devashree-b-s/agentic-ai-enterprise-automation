@@ -1,6 +1,7 @@
 """Employee database model for the HR domain."""
 
 from datetime import datetime
+
 from sqlalchemy import Boolean, DateTime, Float, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -9,7 +10,7 @@ from app.db.base import Base
 
 class Employee(Base):
     """SQLAlchemy model representing an enterprise employee in the HR domain.
-    
+
     Attributes:
         id: Primary key surrogate identifier.
         employee_id: Business identifier (e.g. 'EMP-001'), unique across the enterprise.
@@ -27,10 +28,14 @@ class Employee(Base):
     __tablename__ = "employees"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    employee_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    employee_id: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False
+    )
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(255), unique=True, index=True, nullable=False
+    )
     department: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     role: Mapped[str] = mapped_column(String(100), nullable=False)
     salary: Mapped[float] = mapped_column(Float, nullable=False)

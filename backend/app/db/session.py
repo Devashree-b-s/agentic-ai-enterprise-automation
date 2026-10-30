@@ -1,6 +1,7 @@
 """Database engine, sessionmaker, and session dependency."""
 
 from collections.abc import Generator
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -29,10 +30,10 @@ SessionLocal = sessionmaker(
 
 def get_db() -> Generator[Session, None, None]:
     """FastAPI dependency that provides a transactional database session.
-    
+
     Yields:
         Session: An active SQLAlchemy session.
-        
+
     Ensures:
         The session is always closed after request processing completes,
         even if an unhandled exception occurs.

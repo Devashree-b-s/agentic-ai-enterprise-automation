@@ -1,11 +1,10 @@
 """Tests for database engine, session, and Employee model CRUD operations."""
 
 import pytest
+from app.models.employee import Employee
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
-from app.models.employee import Employee
 
 
 def test_insert_and_retrieve_employee(db_session: Session):
@@ -166,7 +165,9 @@ def test_update_employee_record(db_session: Session):
     db_session.commit()
 
     # Retrieve and verify updated values
-    refreshed = db_session.scalar(select(Employee).where(Employee.employee_id == "EMP-301"))
+    refreshed = db_session.scalar(
+        select(Employee).where(Employee.employee_id == "EMP-301")
+    )
     assert refreshed.role == "Senior Associate"
     assert refreshed.salary == 55000.0
 
@@ -190,5 +191,7 @@ def test_delete_employee_record(db_session: Session):
     db_session.commit()
 
     # Verify record no longer exists
-    deleted = db_session.scalar(select(Employee).where(Employee.employee_id == "EMP-401"))
+    deleted = db_session.scalar(
+        select(Employee).where(Employee.employee_id == "EMP-401")
+    )
     assert deleted is None
