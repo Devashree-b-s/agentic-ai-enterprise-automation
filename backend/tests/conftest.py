@@ -9,6 +9,8 @@ backend_dir = Path(__file__).resolve().parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
+from sqlite3 import Connection as SQLite3Connection
+
 import pytest
 from app.core.security import create_access_token, hash_password
 from app.db.base import Base
@@ -17,7 +19,7 @@ from app.main import app
 from app.models.employee import Employee
 from app.models.user import User, UserRole
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -37,6 +39,14 @@ def db_session() -> Generator[Session, None, None]:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_foreign_keys(dbapi_connection, connection_record):
+        if isinstance(dbapi_connection, SQLite3Connection):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
     TestingSessionLocal = sessionmaker(
         autocommit=False,
         autoflush=False,
@@ -48,6 +58,42 @@ def db_session() -> Generator[Session, None, None]:
 
     session = TestingSessionLocal()
     try:
+        # Seed inventory catalog from inventory.csv for realistic integration testing
+        csv_file = backend_dir.parent / "data" / "inventory.csv"
+        if csv_file.is_file():
+            from app.services.inventory_service import inventory_service
+
+            inventory_service.import_csv(session, csv_file)
+
+        # Ensure IDs 101 & 102 exist to maintain 100% backward compatibility with Sales tests
+        from app.models.inventory import Product
+
+        if not session.get(Product, 101):
+            session.add(
+                Product(
+                    id=101,
+                    sku="SKU-TEST-101",
+                    name="Test Item 101",
+                    quantity_on_hand=500,
+                    safety_stock=50,
+                    target_stock=200,
+                    is_active=True,
+                )
+            )
+        if not session.get(Product, 102):
+            session.add(
+                Product(
+                    id=102,
+                    sku="SKU-TEST-102",
+                    name="Test Item 102",
+                    quantity_on_hand=500,
+                    safety_stock=50,
+                    target_stock=200,
+                    is_active=True,
+                )
+            )
+        session.commit()
+
         yield session
     finally:
         session.close()

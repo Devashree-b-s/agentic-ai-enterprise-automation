@@ -6,6 +6,20 @@ from app.schemas.employee import (
     EmployeeResponse,
     EmployeeUpdate,
 )
+from app.schemas.inventory import (
+    CSVImportSummary,
+    InventorySummaryReport,
+    LowStockAlertReport,
+    LowStockItem,
+    ProductBase,
+    ProductCreate,
+    ProductResponse,
+    ProductUpdate,
+    StockAdjustRequest,
+    StockInRequest,
+    StockMovementResponse,
+    StockOutRequest,
+)
 from app.schemas.sales import (
     CustomerBase,
     CustomerCreate,
@@ -33,6 +47,7 @@ from app.schemas.user import (
 )
 
 __all__ = [
+    "CSVImportSummary",
     "CustomerBase",
     "CustomerCreate",
     "CustomerResponse",
@@ -41,6 +56,9 @@ __all__ = [
     "EmployeeCreate",
     "EmployeeResponse",
     "EmployeeUpdate",
+    "InventorySummaryReport",
+    "LowStockAlertReport",
+    "LowStockItem",
     "MonthlyRevenueItem",
     "MonthlyRevenueReport",
     "OrderCreate",
@@ -50,7 +68,15 @@ __all__ = [
     "OrderItemResponse",
     "OrderResponse",
     "OrderStatusUpdate",
+    "ProductBase",
+    "ProductCreate",
+    "ProductResponse",
+    "ProductUpdate",
     "SalesSummaryReport",
+    "StockAdjustRequest",
+    "StockInRequest",
+    "StockMovementResponse",
+    "StockOutRequest",
     "TokenResponse",
     "UserBase",
     "UserCreate",

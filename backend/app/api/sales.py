@@ -228,7 +228,7 @@ def update_order_status(
     order_id: int,
     status_in: OrderStatusUpdate,
     db: DbSession,
-    _: RequireAdminOrManager,
+    current_user: RequireAdminOrManager,
 ) -> OrderDetailResponse:
     """Update order status with state-machine transition validation."""
     order = sales_service.get_order_by_id(db, order_id)
@@ -237,7 +237,9 @@ def update_order_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Order with ID {order_id} not found.",
         )
-    return sales_service.update_order_status(db, order, status_in.status)  # type: ignore
+    return sales_service.update_order_status(
+        db, order, status_in.status, user_id=current_user.id
+    )  # type: ignore
 
 
 @router.delete(

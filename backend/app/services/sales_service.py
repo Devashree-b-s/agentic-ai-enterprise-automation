@@ -295,8 +295,9 @@ class SalesService:
         db: Session,
         order: Order,
         new_status: OrderStatus,
+        user_id: int | None = None,
     ) -> Order:
-        """Enforce strict lifecycle transitions when modifying order status."""
+        """Enforce strict lifecycle transitions and transactional stock integration."""
         current_status = OrderStatus(order.status)
 
         if current_status == new_status:
@@ -310,6 +311,27 @@ class SalesService:
                     f"Invalid status transition from '{current_status.value}' to '{new_status.value}'. "
                     f"Allowed transitions: {[s.value for s in allowed_next_statuses]}."
                 ),
+            )
+
+        # Inventory Lifecycle Integration:
+        from app.services.inventory_service import inventory_service
+
+        # 1. Confirmation: deduct stock atomically
+        if (
+            current_status == OrderStatus.PENDING
+            and new_status == OrderStatus.CONFIRMED
+        ):
+            inventory_service.deduct_stock_for_confirmed_order(
+                db, order, user_id=user_id
+            )
+
+        # 2. Cancellation of confirmed order: restore stock
+        elif (
+            current_status == OrderStatus.CONFIRMED
+            and new_status == OrderStatus.CANCELLED
+        ):
+            inventory_service.restore_stock_for_cancelled_order(
+                db, order, user_id=user_id
             )
 
         order.status = new_status.value

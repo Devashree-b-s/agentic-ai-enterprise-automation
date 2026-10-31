@@ -1,8 +1,9 @@
 """Database engine, sessionmaker, and session dependency."""
 
 from collections.abc import Generator
+from sqlite3 import Connection as SQLite3Connection
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
@@ -19,6 +20,17 @@ engine = create_engine(
     connect_args=connect_args,
     echo=False,  # Set to True when debugging raw SQL queries
 )
+
+# Enforce foreign key constraints on all SQLite connections
+if settings.DATABASE_URL.startswith("sqlite"):
+
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_foreign_keys(dbapi_connection, connection_record):
+        if isinstance(dbapi_connection, SQLite3Connection):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
 
 # Create a configurable Session factory
 SessionLocal = sessionmaker(

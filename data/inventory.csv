@@ -1,0 +1,31 @@
+product_id,product_name,on_hand,on_order,lead_time_days,safety_stock,target_stock
+SKU-GFT-001,Ceramic Photo Frame,93,175,17,16,169
+SKU-GFT-002,Painted Photo Frame,178,0,10,15,182
+SKU-GFT-003,Rustic Doorstop,543,95,25,35,631
+SKU-GFT-004,Ceramic Wall Clock,154,0,10,24,174
+SKU-GFT-005,Retro Cake Tin,519,0,22,43,495
+SKU-GFT-006,Painted Cake Tin,793,0,14,80,615
+SKU-GFT-007,Woven Doorstop,50,0,12,11,85
+SKU-GFT-008,Glass Photo Frame,68,0,4,9,114
+SKU-GFT-009,Rustic Wall Clock,244,0,18,39,373
+SKU-GFT-010,Wooden Coaster Set,451,0,24,24,329
+SKU-GFT-011,Ceramic Tray,350,0,8,48,334
+SKU-GFT-012,Metal Tray,462,0,22,24,367
+SKU-GFT-013,Floral Bunting,91,0,15,42,313
+SKU-GFT-014,Metal Key Hook,132,0,18,25,347
+SKU-GFT-015,Vintage Tea Light Set,44,0,4,30,169
+SKU-GFT-016,Rustic Storage Jar,288,0,15,25,290
+SKU-GFT-017,Wooden Mug,16,0,5,5,32
+SKU-GFT-018,Glass Lantern,177,0,25,33,437
+SKU-GFT-019,Painted Lantern,310,172,12,26,414
+SKU-GFT-020,Wooden Hanging Heart,49,92,15,16,131
+SKU-GFT-021,Rustic Tray,101,158,9,12,106
+SKU-GFT-022,Ceramic Bunting,90,75,3,46,282
+SKU-GFT-023,Metal Candle Holder,371,0,8,54,499
+SKU-GFT-024,Wooden Storage Jar,579,0,26,25,404
+SKU-GFT-025,Painted Mug,635,0,25,40,378
+SKU-GFT-026,Vintage Coaster Set,188,0,4,37,207
+SKU-GFT-027,Vintage Storage Jar,125,94,17,14,219
+SKU-GFT-028,Woven Storage Jar,300,173,3,5,15
+SKU-GFT-029,Rustic Photo Frame,30,0,19,5,22
+SKU-GFT-030,Rustic Bunting,3,0,6,5,15
