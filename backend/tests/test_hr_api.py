@@ -1,9 +1,9 @@
-"""Integration tests for the Employee HR REST API endpoints."""
+"""Integration tests for the Employee HR REST API endpoints with RBAC."""
 
 from fastapi.testclient import TestClient
 
 
-def test_create_employee_success(client: TestClient):
+def test_create_employee_success(client: TestClient, hr_headers: dict[str, str]):
     """Test creating a new employee returns 201 and correctly serialized response."""
     payload = {
         "employee_id": "EMP-001",
@@ -15,7 +15,7 @@ def test_create_employee_success(client: TestClient):
         "salary": 75000.0,
         "is_active": True,
     }
-    response = client.post("/api/v1/hr/employees/", json=payload)
+    response = client.post("/api/v1/hr/employees/", json=payload, headers=hr_headers)
     assert response.status_code == 201
     data = response.json()
     assert data["id"] is not None
@@ -27,7 +27,7 @@ def test_create_employee_success(client: TestClient):
     assert "updated_at" in data
 
 
-def test_create_employee_duplicate_code(client: TestClient):
+def test_create_employee_duplicate_code(client: TestClient, hr_headers: dict[str, str]):
     """Test creating an employee with a duplicate employee_id returns 409 Conflict."""
     payload = {
         "employee_id": "EMP-002",
@@ -38,7 +38,7 @@ def test_create_employee_duplicate_code(client: TestClient):
         "role": "Sales Rep",
         "salary": 60000.0,
     }
-    res1 = client.post("/api/v1/hr/employees/", json=payload)
+    res1 = client.post("/api/v1/hr/employees/", json=payload, headers=hr_headers)
     assert res1.status_code == 201
 
     duplicate_payload = {
@@ -50,12 +50,16 @@ def test_create_employee_duplicate_code(client: TestClient):
         "role": "DBA",
         "salary": 70000.0,
     }
-    res2 = client.post("/api/v1/hr/employees/", json=duplicate_payload)
+    res2 = client.post(
+        "/api/v1/hr/employees/", json=duplicate_payload, headers=hr_headers
+    )
     assert res2.status_code == 409
     assert "already exists" in res2.json()["detail"]
 
 
-def test_create_employee_duplicate_email(client: TestClient):
+def test_create_employee_duplicate_email(
+    client: TestClient, hr_headers: dict[str, str]
+):
     """Test creating an employee with a duplicate email returns 409 Conflict."""
     payload1 = {
         "employee_id": "EMP-003",
@@ -66,7 +70,7 @@ def test_create_employee_duplicate_email(client: TestClient):
         "role": "Associate",
         "salary": 50000.0,
     }
-    res1 = client.post("/api/v1/hr/employees/", json=payload1)
+    res1 = client.post("/api/v1/hr/employees/", json=payload1, headers=hr_headers)
     assert res1.status_code == 201
 
     payload2 = {
@@ -78,12 +82,12 @@ def test_create_employee_duplicate_email(client: TestClient):
         "role": "Clerk",
         "salary": 48000.0,
     }
-    res2 = client.post("/api/v1/hr/employees/", json=payload2)
+    res2 = client.post("/api/v1/hr/employees/", json=payload2, headers=hr_headers)
     assert res2.status_code == 409
     assert "already exists" in res2.json()["detail"]
 
 
-def test_create_employee_invalid_email(client: TestClient):
+def test_create_employee_invalid_email(client: TestClient, hr_headers: dict[str, str]):
     """Test that submitting an invalid email address triggers Pydantic 422 error."""
     payload = {
         "employee_id": "EMP-005",
@@ -94,11 +98,13 @@ def test_create_employee_invalid_email(client: TestClient):
         "role": "Developer",
         "salary": 80000.0,
     }
-    response = client.post("/api/v1/hr/employees/", json=payload)
+    response = client.post("/api/v1/hr/employees/", json=payload, headers=hr_headers)
     assert response.status_code == 422
 
 
-def test_create_employee_negative_salary(client: TestClient):
+def test_create_employee_negative_salary(
+    client: TestClient, hr_headers: dict[str, str]
+):
     """Test that submitting a negative salary triggers Pydantic 422 error."""
     payload = {
         "employee_id": "EMP-006",
@@ -109,11 +115,11 @@ def test_create_employee_negative_salary(client: TestClient):
         "role": "Executive",
         "salary": -1000.0,
     }
-    response = client.post("/api/v1/hr/employees/", json=payload)
+    response = client.post("/api/v1/hr/employees/", json=payload, headers=hr_headers)
     assert response.status_code == 422
 
 
-def test_list_employees_and_filtering(client: TestClient):
+def test_list_employees_and_filtering(client: TestClient, hr_headers: dict[str, str]):
     """Test listing employees with department filtering and pagination."""
     employees = [
         {
@@ -145,15 +151,15 @@ def test_list_employees_and_filtering(client: TestClient):
         },
     ]
     for emp in employees:
-        client.post("/api/v1/hr/employees/", json=emp)
+        client.post("/api/v1/hr/employees/", json=emp, headers=hr_headers)
 
     # List all
-    res_all = client.get("/api/v1/hr/employees/")
+    res_all = client.get("/api/v1/hr/employees/", headers=hr_headers)
     assert res_all.status_code == 200
     assert len(res_all.json()) >= 3
 
     # Filter by department
-    res_sales = client.get("/api/v1/hr/employees/?department=Sales")
+    res_sales = client.get("/api/v1/hr/employees/?department=Sales", headers=hr_headers)
     assert res_sales.status_code == 200
     sales_data = res_sales.json()
     assert len(sales_data) == 2
@@ -161,12 +167,12 @@ def test_list_employees_and_filtering(client: TestClient):
         assert emp["department"] == "Sales"
 
     # Pagination: limit 1
-    res_paged = client.get("/api/v1/hr/employees/?limit=1")
+    res_paged = client.get("/api/v1/hr/employees/?limit=1", headers=hr_headers)
     assert res_paged.status_code == 200
     assert len(res_paged.json()) == 1
 
 
-def test_get_employee_by_id(client: TestClient):
+def test_get_employee_by_id(client: TestClient, hr_headers: dict[str, str]):
     """Test retrieving an employee by database primary key ID."""
     payload = {
         "employee_id": "EMP-201",
@@ -177,21 +183,21 @@ def test_get_employee_by_id(client: TestClient):
         "role": "Lead",
         "salary": 65000.0,
     }
-    create_res = client.post("/api/v1/hr/employees/", json=payload)
+    create_res = client.post("/api/v1/hr/employees/", json=payload, headers=hr_headers)
     emp_id = create_res.json()["id"]
 
     # Success lookup
-    get_res = client.get(f"/api/v1/hr/employees/{emp_id}")
+    get_res = client.get(f"/api/v1/hr/employees/{emp_id}", headers=hr_headers)
     assert get_res.status_code == 200
     assert get_res.json()["employee_id"] == "EMP-201"
 
     # 404 lookup
-    not_found_res = client.get("/api/v1/hr/employees/999999")
+    not_found_res = client.get("/api/v1/hr/employees/999999", headers=hr_headers)
     assert not_found_res.status_code == 404
     assert "not found" in not_found_res.json()["detail"].lower()
 
 
-def test_update_employee(client: TestClient):
+def test_update_employee(client: TestClient, hr_headers: dict[str, str]):
     """Test updating employee attributes and handling duplicate email conflict."""
     emp1 = client.post(
         "/api/v1/hr/employees/",
@@ -204,6 +210,7 @@ def test_update_employee(client: TestClient):
             "role": "Officer",
             "salary": 60000.0,
         },
+        headers=hr_headers,
     ).json()
 
     res_emp2 = client.post(
@@ -217,6 +224,7 @@ def test_update_employee(client: TestClient):
             "role": "Specialist",
             "salary": 80000.0,
         },
+        headers=hr_headers,
     )
     assert res_emp2.status_code == 201
 
@@ -227,6 +235,7 @@ def test_update_employee(client: TestClient):
             "role": "Head of Security",
             "salary": 75000.0,
         },
+        headers=hr_headers,
     )
     assert update_res.status_code == 200
     assert update_res.json()["role"] == "Head of Security"
@@ -238,16 +247,21 @@ def test_update_employee(client: TestClient):
         json={
             "email": "john@enterprise.com",
         },
+        headers=hr_headers,
     )
     assert conflict_res.status_code == 409
     assert "already exists" in conflict_res.json()["detail"]
 
     # 404 Update non-existent employee
-    not_found_res = client.put("/api/v1/hr/employees/999999", json={"role": "Manager"})
+    not_found_res = client.put(
+        "/api/v1/hr/employees/999999",
+        json={"role": "Manager"},
+        headers=hr_headers,
+    )
     assert not_found_res.status_code == 404
 
 
-def test_delete_employee(client: TestClient):
+def test_delete_employee(client: TestClient, hr_headers: dict[str, str]):
     """Test deleting an employee returns 204 and subsequent queries return 404."""
     emp = client.post(
         "/api/v1/hr/employees/",
@@ -260,16 +274,17 @@ def test_delete_employee(client: TestClient):
             "role": "Counsel",
             "salary": 95000.0,
         },
+        headers=hr_headers,
     ).json()
 
     # Delete existing
-    del_res = client.delete(f"/api/v1/hr/employees/{emp['id']}")
+    del_res = client.delete(f"/api/v1/hr/employees/{emp['id']}", headers=hr_headers)
     assert del_res.status_code == 204
 
     # Verify lookup returns 404
-    get_res = client.get(f"/api/v1/hr/employees/{emp['id']}")
+    get_res = client.get(f"/api/v1/hr/employees/{emp['id']}", headers=hr_headers)
     assert get_res.status_code == 404
 
     # Delete non-existent employee returns 404
-    del_not_found = client.delete("/api/v1/hr/employees/999999")
+    del_not_found = client.delete("/api/v1/hr/employees/999999", headers=hr_headers)
     assert del_not_found.status_code == 404
