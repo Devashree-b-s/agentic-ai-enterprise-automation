@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.analytics import router as analytics_router
 from app.api.auth import router as auth_router
 from app.api.hr import router as hr_router
 from app.api.inventory import router as inventory_router
@@ -38,6 +39,7 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(hr_router, prefix="/api/v1/hr")
 app.include_router(inventory_router, prefix="/api/v1/inventory")
 app.include_router(sales_router, prefix="/api/v1/sales")
+app.include_router(analytics_router, prefix="/api/v1/analytics")
 
 
 @app.get("/", tags=["General"])

@@ -1,13 +1,19 @@
 """SQLAlchemy database models."""
 
 from app.models.employee import Employee
+from app.models.historical_sale import HistoricalSale
 from app.models.inventory import Product, StockMovement, StockMovementType
+from app.models.leave import LeaveRequest, LeaveStatus, LeaveType
 from app.models.sales import Customer, Order, OrderItem, OrderStatus
 from app.models.user import User, UserRole
 
 __all__ = [
     "Customer",
     "Employee",
+    "HistoricalSale",
+    "LeaveRequest",
+    "LeaveStatus",
+    "LeaveType",
     "Order",
     "OrderItem",
     "OrderStatus",

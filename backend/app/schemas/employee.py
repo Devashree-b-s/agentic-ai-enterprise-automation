@@ -53,10 +53,10 @@ class EmployeeBase(BaseModel):
         description="Job title or designation",
         examples=["HR Manager"],
     )
-    salary: float = Field(
-        ...,
+    salary: float | None = Field(
+        default=None,
         ge=0,
-        description="Annual compensation (must be non-negative)",
+        description="Annual compensation (must be non-negative if provided)",
         examples=[75000.0],
     )
     is_active: bool = Field(

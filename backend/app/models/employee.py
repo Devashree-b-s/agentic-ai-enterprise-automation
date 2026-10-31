@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.leave import LeaveRequest
     from app.models.user import User
 
 
@@ -23,11 +24,12 @@ class Employee(Base):
         email: Work email address, unique across the enterprise.
         department: Assigned department (e.g., 'HR', 'Sales', 'Inventory').
         role: Job designation (e.g., 'Sales Manager', 'Inventory Clerk').
-        salary: Annual compensation amount (used for deterministic financial analytics).
+        salary: Annual compensation amount (nullable for external/imported employee records).
         is_active: Employment status flag (active vs terminated).
         created_at: Database timestamp when the record was inserted.
         updated_at: Database timestamp when the record was last modified.
         user: Associated User account for system access.
+        leaves: Associated LeaveRequest records for the employee.
     """
 
     __tablename__ = "employees"
@@ -43,7 +45,7 @@ class Employee(Base):
     )
     department: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     role: Mapped[str] = mapped_column(String(100), nullable=False)
-    salary: Mapped[float] = mapped_column(Float, nullable=False)
+    salary: Mapped[float | None] = mapped_column(Float, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -62,6 +64,13 @@ class Employee(Base):
         "User",
         back_populates="employee",
         uselist=False,
+    )
+
+    # Relationship to leave records
+    leaves: Mapped[list["LeaveRequest"]] = relationship(
+        "LeaveRequest",
+        back_populates="employee",
+        cascade="all, delete-orphan",
     )
 
     @property
