@@ -203,13 +203,18 @@ class AnalyticsService:
             hist_stmt = hist_stmt.where(HistoricalSale.order_date <= end_date)
 
         # Revenue by status in historical
+        status_query = select(
+            HistoricalSale.order_status,
+            func.sum(HistoricalSale.subtotal),
+            func.count(HistoricalSale.id),
+            func.sum(HistoricalSale.quantity),
+        )
+        if start_date:
+            status_query = status_query.where(HistoricalSale.order_date >= start_date)
+        if end_date:
+            status_query = status_query.where(HistoricalSale.order_date <= end_date)
         hist_status_rows = db.execute(
-            select(
-                HistoricalSale.order_status,
-                func.sum(HistoricalSale.subtotal),
-                func.count(HistoricalSale.id),
-                func.sum(HistoricalSale.quantity),
-            ).group_by(HistoricalSale.order_status)
+            status_query.group_by(HistoricalSale.order_status)
         ).all()
 
         revenue_by_status: dict[str, Decimal] = {}
@@ -230,13 +235,16 @@ class AnalyticsService:
                     total_units += row[3] or 0
 
         # Also add operational recognized sales
-        op_order_rows = db.execute(
-            select(
-                Order.status,
-                func.sum(Order.total_amount),
-                func.count(Order.id),
-            ).group_by(Order.status)
-        ).all()
+        op_query = select(
+            Order.status,
+            func.sum(Order.total_amount),
+            func.count(Order.id),
+        )
+        if start_date:
+            op_query = op_query.where(func.date(Order.created_at) >= start_date)
+        if end_date:
+            op_query = op_query.where(func.date(Order.created_at) <= end_date)
+        op_order_rows = db.execute(op_query.group_by(Order.status)).all()
 
         for op_row in op_order_rows:
             st = op_row[0]
@@ -247,14 +255,20 @@ class AnalyticsService:
                 total_tx += op_row[2] or 0
 
         # Operational units sold
-        op_units = (
-            db.scalar(
-                select(func.sum(OrderItem.quantity))
-                .join(Order, OrderItem.order_id == Order.id)
-                .where(Order.status.in_(cls.RECOGNIZED_OPERATIONAL_STATUSES))
-            )
-            or 0
+        op_units_query = (
+            select(func.sum(OrderItem.quantity))
+            .join(Order, OrderItem.order_id == Order.id)
+            .where(Order.status.in_(cls.RECOGNIZED_OPERATIONAL_STATUSES))
         )
+        if start_date:
+            op_units_query = op_units_query.where(
+                func.date(Order.created_at) >= start_date
+            )
+        if end_date:
+            op_units_query = op_units_query.where(
+                func.date(Order.created_at) <= end_date
+            )
+        op_units = db.scalar(op_units_query) or 0
         total_units += int(op_units)
 
         # Monthly recognized revenue trends

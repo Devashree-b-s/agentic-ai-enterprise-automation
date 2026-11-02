@@ -42,6 +42,12 @@ RequireStaffOrManager = Annotated[
 
 
 @employees_router.post(
+    "",
+    response_model=EmployeeResponse,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
+@employees_router.post(
     "/",
     response_model=EmployeeResponse,
     status_code=status.HTTP_201_CREATED,
@@ -69,6 +75,12 @@ def create_employee(
     return hr_service.create_employee(db, employee_in)
 
 
+@employees_router.get(
+    "",
+    response_model=list[EmployeeResponse],
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @employees_router.get(
     "/",
     response_model=list[EmployeeResponse],

@@ -220,6 +220,14 @@ class InventoryService:
         new_qty = prev_qty + req.quantity
         product.quantity_on_hand = new_qty
 
+        # If incoming goods fulfill open purchase orders, decrement quantity_on_order
+        if (
+            req.reference
+            and any(k in req.reference for k in ["PO-", "REQ-PO"])
+            and product.quantity_on_order > 0
+        ):
+            product.quantity_on_order = max(0, product.quantity_on_order - req.quantity)
+
         movement = StockMovement(
             product_id=product.id,
             movement_type=StockMovementType.IN.value,

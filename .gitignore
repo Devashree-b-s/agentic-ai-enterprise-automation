@@ -23,6 +23,11 @@ build/
 htmlcov/
 .ruff_cache/
 .mypy_cache/
+*.log
+full_backend_test_results.txt
+pytest_results.txt
+pytest_collect.txt
+backend/tests/e2e_all_roles_results.json
 
 # ==========================================
 # Environment Variables & Secrets
@@ -35,10 +40,14 @@ htmlcov/
 # Databases & Storage
 # ==========================================
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 data/chroma/
+data/test_chroma*/
 data/uploads/
+data/backups/
 
 # ==========================================
 # Frontend & Node
@@ -60,3 +69,10 @@ yarn-error.log*
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# ==========================================
+# Local Scratch & Temporary Scripts
+# ==========================================
+build_frontend_pages.py
+write_overview.py
+

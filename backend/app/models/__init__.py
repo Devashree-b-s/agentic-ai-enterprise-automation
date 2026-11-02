@@ -1,5 +1,12 @@
 """SQLAlchemy database models."""
 
+from app.models.approval import (
+    ApprovalAudit,
+    ApprovalRequest,
+    ApprovalRequestType,
+    ApprovalStatus,
+)
+from app.models.conversation import Conversation, ConversationMessage
 from app.models.employee import Employee
 from app.models.historical_sale import HistoricalSale
 from app.models.inventory import Product, StockMovement, StockMovementType
@@ -8,6 +15,12 @@ from app.models.sales import Customer, Order, OrderItem, OrderStatus
 from app.models.user import User, UserRole
 
 __all__ = [
+    "ApprovalAudit",
+    "ApprovalRequest",
+    "ApprovalRequestType",
+    "ApprovalStatus",
+    "Conversation",
+    "ConversationMessage",
     "Customer",
     "Employee",
     "HistoricalSale",

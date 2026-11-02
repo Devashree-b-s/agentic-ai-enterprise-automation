@@ -56,7 +56,7 @@ def run_import(csv_path: str = "data/inventory.csv") -> int:
 
         print("==================================================\n")
         return 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"Fatal import error: {exc}", file=sys.stderr)
         return 1
     finally:

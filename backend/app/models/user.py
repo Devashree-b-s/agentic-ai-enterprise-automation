@@ -10,6 +10,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.approval import ApprovalRequest
+    from app.models.conversation import Conversation
     from app.models.employee import Employee
 
 
@@ -58,6 +60,20 @@ class User(Base):
 
     employee: Mapped["Employee | None"] = relationship(
         "Employee", back_populates="user"
+    )
+    conversations: Mapped[list["Conversation"]] = relationship(
+        "Conversation", back_populates="user", cascade="all, delete-orphan"
+    )
+    requested_approvals: Mapped[list["ApprovalRequest"]] = relationship(
+        "ApprovalRequest",
+        foreign_keys="[ApprovalRequest.requester_id]",
+        back_populates="requester",
+        cascade="all, delete-orphan",
+    )
+    reviewed_approvals: Mapped[list["ApprovalRequest"]] = relationship(
+        "ApprovalRequest",
+        foreign_keys="[ApprovalRequest.reviewed_by_id]",
+        back_populates="reviewed_by",
     )
 
     created_at: Mapped[datetime] = mapped_column(

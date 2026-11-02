@@ -25,10 +25,16 @@ engine = create_engine(
 if settings.DATABASE_URL.startswith("sqlite"):
 
     @event.listens_for(engine, "connect")
-    def _set_sqlite_foreign_keys(dbapi_connection, connection_record):
+    def _configure_sqlite_connection(dbapi_connection, connection_record):
         if isinstance(dbapi_connection, SQLite3Connection):
             cursor = dbapi_connection.cursor()
+            # Enforce foreign key constraints
             cursor.execute("PRAGMA foreign_keys=ON")
+            # Set busy timeout to 5000ms to gracefully handle concurrent operations
+            cursor.execute("PRAGMA busy_timeout=5000")
+            # Enable Write-Ahead Logging (WAL) mode for file-based databases to maximize read-write concurrency
+            if ":memory:" not in settings.DATABASE_URL:
+                cursor.execute("PRAGMA journal_mode=WAL")
             cursor.close()
 
 
