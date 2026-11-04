@@ -1,10 +1,38 @@
 """Tests for Phase 4: Advanced Multi-Agent Coordination and Domain Specialization."""
 
+from unittest.mock import MagicMock
+
+import pytest
+from fastapi.testclient import TestClient
+
 from app.agents.coordinator import multi_agent_coordinator
+from app.agents.llm import set_custom_chat_model
 from app.agents.specialized import SPECIALIZED_AGENTS
+from app.agents.supervisor import fallback_route_query
 from app.core.security import hash_password
 from app.models.user import User, UserRole
-from fastapi.testclient import TestClient
+
+
+@pytest.fixture
+def deterministic_supervisor_llm():
+    """Inject deterministic routing and force the deterministic answer synthesizer."""
+    model = MagicMock()
+    structured_model = MagicMock()
+
+    def route(messages, **kwargs):
+        query = messages[-1].content
+        prefix = "[Current User Question]: "
+        query = query.removeprefix(prefix)
+        return fallback_route_query(query)
+
+    structured_model.invoke.side_effect = route
+    model.with_structured_output.return_value = structured_model
+    model.invoke.side_effect = RuntimeError("Deterministic test synthesis")
+    set_custom_chat_model(model)
+    try:
+        yield
+    finally:
+        set_custom_chat_model(None)
 
 
 def test_specialized_agents_registry():
@@ -71,7 +99,9 @@ def test_single_specialized_agent_delegation(client: TestClient, admin_headers: 
 
 
 def test_multi_agent_coordination_and_decomposition(
-    client: TestClient, admin_headers: dict[str, str]
+    client: TestClient,
+    admin_headers: dict[str, str],
+    deterministic_supervisor_llm,
 ):
     """Test cross-department compound query coordinating Inventory, Sales, and HR agents."""
     query = "Which products are running low, what is our monthly revenue, and how many employees are on leave?"

@@ -18,15 +18,11 @@ from app.api.inventory import router as inventory_router
 from app.api.predictions import router as predictions_router
 from app.api.sales import router as sales_router
 from app.core.config import settings
-from app.db.base import Base
-from app.db.session import engine
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager to initialize resources on startup."""
-    # Ensure database tables exist on startup in development
-    Base.metadata.create_all(bind=engine)
+    """Application lifespan manager; schema changes are applied through Alembic."""
     yield
 
 
@@ -58,11 +54,16 @@ logger = logging.getLogger("app.main")
 @app.exception_handler(Exception)
 async def global_unhandled_exception_handler(request: Request, exc: Exception):
     """Global exception handler to prevent leaking raw tracebacks in production."""
-    logger.exception("Unhandled server exception on %s %s: %s", request.method, request.url.path, exc)
+    logger.exception(
+        "Unhandled server exception on %s %s: %s", request.method, request.url.path, exc
+    )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "An internal server error occurred. Please contact the administrator."},
+        content={
+            "detail": "An internal server error occurred. Please contact the administrator."
+        },
     )
+
 
 # Register API routers
 app.include_router(auth_router, prefix="/api/v1")

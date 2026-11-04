@@ -42,9 +42,9 @@
 
 Modern enterprise resource planning (ERP) architectures face severe fragmentation: departmental data repositories operate within isolated silos, cross-functional reporting requires complex manual joins, and strategic executive decisions suffer from delayed latency. While Large Language Models (LLMs) offer unprecedented natural language querying capabilities, direct deployment of generic LLMs in enterprise contexts introduces unacceptable risks of factual hallucination, unconstrained data exposure, and catastrophic unvetted state mutations.
 
-This project designs and implements the **Agentic AI Based Intelligent Enterprise Automation and Decision Support System**, an end-to-end single-tenant software platform that integrates Human Resources (HR), Sales Operations, and Inventory Management into a unified, secure analytical dashboard. The architecture combines deterministic backend business logic with a **LangGraph Supervisor-Coordinator Multi-Agent framework**. Natural language queries are dynamically decomposed and delegated to specialized sub-agents (`AnalyticsAgent`, `DocumentIntelligenceAgent`, `HRAgent`, `InventoryAgent`, and `SalesAgent`). To ensure reliability, LLMs are restricted strictly to cognitive routing and synthesis, while all quantitative calculations, database state mutations, and policy enforcement are executed by deterministic Python service layers.
+This project designs and implements the **Agentic AI Based Intelligent Enterprise Automation and Decision Support System**, an end-to-end single-tenant software platform that integrates Human Resources (HR), Sales Operations, and Inventory Management into a unified, secure analytical dashboard. The architecture combines deterministic backend business logic with a **LangGraph Supervisor-Coordinator Multi-Agent framework**. Natural language queries are dynamically decomposed and delegated to specialized sub-agents (`AnalyticsAgent`, `DocumentIntelligenceAgent`, `HRAgent`, `InventoryAgent`, and `SalesAgent`). To ensure reliability, LLMs are restricted strictly to cognitive routing and synthesis, while all quantitative calculations, database state mutations, and policy enforcement are executed by deterministic Python service layers. Phase 1 establishes controlled, independent migration and provenance foundations for operational and historical storage; source-specific historical ingestion is not yet implemented.
 
-The system incorporates an internal **Retrieval-Augmented Generation (RAG)** pipeline powered by ChromaDB for knowledge base document intelligence, a persistent thread-safe conversation memory engine, an automated **Human-in-the-Loop (HITL) two-phase commit approval engine** for sensitive purchase requisitions and leave approvals, and an empirical **time-series predictive forecasting module** that benchmarks Naive, Moving Average, Linear Trend, and Holt's Exponential Smoothing models. The backend is implemented in FastAPI and SQLAlchemy 2.0 with Argon2id password hashing and JWT RBAC, complemented by a modern React 19 and Tailwind CSS single-page application. Systematic validation comprising 184 backend automated tests, Playwright multi-role browser testing, and Oxlint code analysis confirms 100% test pass rates, sub-second query performance, and robust fault containment.
+The system incorporates an internal **Retrieval-Augmented Generation (RAG)** pipeline powered by ChromaDB for knowledge base document intelligence, a persistent thread-safe conversation memory engine, an automated **Human-in-the-Loop (HITL) two-phase commit approval engine** for sensitive purchase requisitions and leave approvals, and an empirical **time-series predictive forecasting module** that benchmarks Naive, Moving Average, Linear Trend, and Holt's Exponential Smoothing models. The backend is implemented in FastAPI and SQLAlchemy 2.0 with Argon2id password hashing and JWT RBAC, complemented by a modern React 19 and Tailwind CSS single-page application. The V1 `historical_sales` table remains in the operational database as an explicitly documented legacy limitation; it is not the V2 historical store.
 
 ---
 
@@ -210,7 +210,7 @@ flowchart TD
 
 - **Programming Languages:** Python 3.12 (Backend), TypeScript 5.7 (Frontend).
 - **Web API Framework:** FastAPI (Asynchronous ASGI framework, OpenAPI documentation generation).
-- **ORM & Migrations:** SQLAlchemy 2.0 (Typed mapped statements), Alembic 1.13 (Database schema migrations).
+- **ORM & Migrations:** SQLAlchemy 2.0 (Typed mapped statements), Alembic (dependency range `>=1.13,<2.0`) with separate operational and historical environments.
 - **Relational Database:** SQLite 3 configured with Write-Ahead Logging (`PRAGMA journal_mode=WAL`) and foreign key enforcement (`PRAGMA foreign_keys=ON`).
 - **Vector Database:** ChromaDB 1.5 (Embedded vector store with local persistence under `data/chroma/`).
 - **Multi-Agent Orchestration:** LangGraph 1.2 (Stateful directed cyclic graphs), LangChain Core 1.7 (Message and tool primitives).
@@ -451,6 +451,57 @@ erDiagram
 8. **`historical_sales`:** High-volume analytics table populated with 15,851 transactions spanning May 2026 to October 2026. Used exclusively for predictive model training, revenue trending, and baseline forecasting evaluations.
 9. **`approval_requests` & `approval_audits`:** Human-in-the-loop state machine. Stores unique request code (`REQ-PO-...`, `REQ-LV-...`), type, status, JSON serialized payload, JSON serialized execution results, reviewer comments, and full transition audit logs.
 10. **`conversations` & `conversation_messages`:** Chat memory store. Conversations maintain thread metadata per user; messages store conversational turn roles (`user`, `assistant`), message text, JSON-encoded tool calls, and retrieved document citations.
+
+### V2.0 Database Foundation and Approved Data Boundaries
+
+Phase 1 establishes the migration, configuration, backup, read-only access, and
+provenance foundation only. It does not import UCI Online Retail II, DataCo, M5, or
+IBM HR data, and does not migrate V1 rows from `historical_sales`.
+
+The active operational database was validated against the reviewed V1 baseline,
+stamped at `71a342e826c8`, and upgraded to `a20d5b9e8f41`. Its provenance registry is
+empty. The optional historical database remains absent, which is supported by
+application startup and the historical availability helper.
+
+- `enterprise.db` remains the operational database. `historical.db` is a separate,
+  optional file with an independent Alembic environment/version table and provenance
+  registry. Normal startup does not create/open it. Historical runtime connections
+  use SQLite `mode=ro` and `PRAGMA query_only=ON`; no cross-database foreign keys
+  are permitted.
+- The V1 `historical_sales` table remains in `enterprise.db` pending a future,
+  separately validated migration. It is not compliant with the approved V2
+  source-specific historical storage model, and legacy analytics must not be
+  represented as newly ingested V2 data.
+- Every future historical row will preserve its source and `import_batch_id`.
+  Historical rows must never drive stock changes, approvals, or workflows. Admin
+  and Manager are the approved roles for future historical tools; Employee access
+  is excluded. IBM HR benchmark access remains separately restricted.
+- UCI Online Retail II and DataCo will use different historical tables and native
+  currencies (GBP and USD); ingestion performs no currency conversion. Keep
+  cancellations/returns flagged, preserve identifiers as text where needed, and
+  retain null UCI customer IDs with a guest flag. DataCo is customer-shipping data,
+  not supplier-delay evidence. Supplier-delay signals must come from labelled
+  synthetic scenarios.
+- External products are stored separately and may map only to the 30 existing
+  operational SKUs with explicit confirmation; names, descriptions, or identifiers
+  alone never auto-map. Unmatched rows remain analytics-only.
+- DataCo ingestion excludes passwords, emails, names, street addresses, and other
+  unnecessary PII. A genuinely needed identifier uses keyed HMAC pseudonymization,
+  not plain hashing. Raw files remain immutable/checksummed; provenance records
+  privacy transformations. Phase 8 verification compares source batch IDs, row
+  counts, and checksums.
+- M5 remains outside both databases in `data/benchmarks/m5/` as Parquet with
+  approximately 100 item-store series, calendar and price features, and chronological
+  train/test evaluation. DuckDB is optional; reports include reproducible MAE,
+  RMSE, and MAPE. IBM HR remains an isolated benchmark and never backfills
+  operational salaries or personal information.
+- Configure absolute `DATABASE_URL` and `HISTORICAL_DATABASE_URL` values in
+  `backend/.env`. Relative operational SQLite URLs are anchored to the project root.
+  Both databases use WAL and `busy_timeout`; immutable raw inputs and databases
+  have independent provenance/version histories.
+- Existing V1 databases are validated against the checked-in baseline before
+  stamping. Never edit historical revisions; subsequent schema changes use new
+  revisions. Create a verified online backup before applying operational migrations.
 
 ---
 
@@ -782,31 +833,27 @@ flowchart TD
 The platform has been subjected to rigorous verification across multiple testing tiers.
 
 ### 19.1 Automated Backend Test Suite (Pytest)
-The backend automated test suite comprises **184 unit and integration tests** distributed across 11 test modules:
+The current checkout collects **192 tests** across the existing V1 suite and the
+Phase 1 database foundation tests. Full-suite verification was run from the project
+root and backend directory with disposable, migrated SQLite and Chroma paths,
+external provider calls disabled, and deterministic test model injection:
 
 ```text
-============================= test session starts =============================
-rootdir: D:\Projects\Agentic AI Integrated Enterprise and Decision Support System
-collected 184 items
-
-backend/tests/test_agent_tools.py ..................................    [ 18%]
-backend/tests/test_agents.py ..........................                  [ 32%]
-backend/tests/test_analytics.py ................                         [ 41%]
-backend/tests/test_approvals.py ....................                     [ 52%]
-backend/tests/test_auth.py ..............                                [ 59%]
-backend/tests/test_conversations.py ........                             [ 64%]
-backend/tests/test_database.py .........                                 [ 69%]
-backend/tests/test_hr.py ............                                    [ 75%]
-backend/tests/test_inventory.py .................                        [ 84%]
-backend/tests/test_leaves.py ..........                                  [ 90%]
-backend/tests/test_multi_agent.py ........                               [ 94%]
-backend/tests/test_predictions.py ..........                             [100%]
-
-============================= 184 passed in 98.49s =============================
+192 collected
+192 passed
 ```
 
-- **Pass Rate:** **100% (184 passed, 0 failed, 0 errors)**.
-- **Areas Validated:** Token cryptography, Argon2id verification, stock deduction on sales confirmation, low-stock threshold math, ChromaDB ingest/delete integrity, supervisor query routing, coordinator worker failure containment, and time-series model evaluation splits.
+- The compound multi-agent test injects deterministic routing and synthesis fakes.
+  Its database workers use the isolated migrated SQLite URL, so no provider call or
+  production credential is required.
+- **Phase 1 focused suite:** 8 database foundation tests passed.
+- **Additional checks:** live V1 schema baseline validation passed; targeted
+  inventory import path, migration, backup/restore, read-only access, and startup
+  tests passed.
+- **V1 count discrepancy:** the Phase 0 recorded successful run reported 183 tests,
+  while the current checkout contains 184 pre-existing tests. The one-test
+  historical collection difference remains unresolved. Both final full runs used
+  disposable database and Chroma paths on D: and produced the same 192/192 result.
 
 ### 19.2 Frontend Code Quality & Build Verification
 - **Oxlint:** Executed across all 50 TypeScript/React files. **Zero errors found**.
@@ -830,7 +877,7 @@ To maintain academic and professional integrity, the following intentional bound
 2. **Absence of Optical Character Recognition (OCR):**
    The RAG ingestion pipeline parses native text streams from PDF, DOCX, and TXT files. It **does not bundle an OCR engine** (such as Tesseract). Scanned image-only PDFs containing no embedded text layer cannot be parsed and will be rejected.
 3. **Forecasting Dataset Duration & Seasonality Limits:**
-   The historical dataset contains **six monthly points** (`2026-05` to `2026-10`). While sufficient to benchmark baseline trend models against moving averages over a 2-month held-out evaluation window, conclusive annual seasonal patterns (such as holiday peaks) cannot be mathematically verified until at least **24 months** of continuous data are collected.
+   The legacy historical dataset contains **six monthly points** (`2026-05` to `2026-10`). While sufficient to benchmark baseline trend models against moving averages over a 2-month held-out evaluation window, conclusive annual seasonal patterns (such as holiday peaks) cannot be mathematically verified until at least **24 months** of continuous data are collected.
 4. **Approximate Forecast Confidence Bounds:**
    Forecast uncertainty bands represent approximate 80% standard-error intervals derived from linear regression residual variance, rather than full Bayesian posterior simulations.
 5. **Single-Tenant Architecture:**
@@ -854,7 +901,7 @@ For future iterations and commercial deployment, the following enhancements are 
 
 The **Agentic AI Based Intelligent Enterprise Automation and Decision Support System** demonstrates a successful, secure paradigm for deploying artificial intelligence within enterprise operations. By coupling the cognitive routing and natural language synthesis of LangGraph multi-agent workflows with the deterministic execution of typed Python services, the platform eliminates hallucination risks while unlocking cross-departmental business intelligence.
 
-The implementation successfully unifies Human Resources, Sales Operations, and Inventory Management, safeguards corporate policy documents via authorized RAG, enforces governance through two-phase human-in-the-loop approvals, and delivers quantitative clarity through empirical time-series forecasting. Supported by a 100% passing test suite of 184 tests, clean architectural layering, and robust cryptographic security, the project provides a comprehensive, publication-ready engineering submission.
+The implementation unifies Human Resources, Sales Operations, and Inventory Management, safeguards corporate policy documents via authorized RAG, enforces governance through two-phase human-in-the-loop approvals, and delivers quantitative clarity through empirical time-series forecasting. Phase 1 adds independent migration and provenance foundations, strict historical read-only access, and verified backup/restore tools. The legacy historical-sales table remains operationally co-located and source-specific benchmark ingestion is not implemented. Current full-suite results are 192 passed from both supported working directories, with Phase 1 foundation tests passing independently.
 
 ---
 

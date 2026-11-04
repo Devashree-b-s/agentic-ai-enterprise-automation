@@ -6,7 +6,7 @@
 [![React Version](https://img.shields.io/badge/React-19.3-61DAFB.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4.3-38B2AC.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Tests Passing](https://img.shields.io/badge/Tests-184%20Passed%20(100%25)-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-192%20passed%20(100%25)-brightgreen.svg)]()
 [![Code Quality](https://img.shields.io/badge/Linters-Ruff%20(16%20BLE001%20Reviewed)%20%7C%20Oxlint-blueviolet.svg)]()
 
 > A completed development prototype for an autonomous multi-agent enterprise operational and decision-support platform integrating **Human Resources (HR)**, **Sales Operations**, and **Inventory Management** with a **LangGraph Multi-Agent Orchestrator**, private **ChromaDB Document Intelligence (RAG)**, automated **Human-in-the-Loop (HITL) Approvals**, and empirical **Time-Series Predictive Forecasting**. *(Production deployment is pending scheduled hosting rollout).*
@@ -75,7 +75,7 @@ Large Language Models are strictly restricted to natural language comprehension,
 
 This system combines deterministic relational architecture with LangGraph agentic orchestration:
 - **Hierarchical Supervisor Multi-Agent System:** A central `SupervisorAgent` parses natural language queries, formulates execution plans, and coordinates 5 specialized domain agents.
-- **Deterministic Tool Calling:** Sub-agents execute 21 strongly typed Python tools that interact with the database via SQLAlchemy 2.0 ORM, eliminating SQL injection and arithmetic errors.
+- **Deterministic Tool Calling:** Sub-agents execute 23 registered strongly typed Python tools through SQLAlchemy 2.0 services.
 - **Private ChromaDB RAG Intelligence:** Enterprise policy documents are parsed, chunked, and embedded locally into ChromaDB with metadata-scoped role filtering.
 - **Automated Human-in-the-Loop (HITL) Governance:** A two-phase commit approval engine forces high-risk actions (purchase requisitions > $5,000 or by non-executives) into a pending review queue with an immutable audit log.
 - **Empirical Time-Series Forecasting:** A statistical forecasting engine evaluates 4 competing models (Naive, SMA-3, OLS, Holt's) on out-of-sample data, refits the winner, and projects a 3-month sales horizon with standard-error bounds.
@@ -132,7 +132,7 @@ flowchart TD
     end
 
     subgraph BusinessServiceTier["Business Services & Tool Execution Tier"]
-        Tools["21 Deterministic Tool Functions"]
+        Tools["23 Deterministic Tool Functions"]
         S_HR["HR Service"]
         S_Sales["Sales Service"]
         S_Inv["Inventory Service"]
@@ -326,7 +326,7 @@ The system employs industry-standard cryptographic security:
 | **Data Validation** | Pydantic v2 | 2.7.0 | Strongly typed request/response schemas and settings |
 | **Database ORM** | SQLAlchemy | 2.0.30 | Enterprise object-relational mapping and connection management |
 | **Database Engine** | SQLite 3 (WAL Mode) | 3.x | High-concurrency relational storage with Write-Ahead Logging |
-| **Schema Migrations** | Alembic | 1.13.0 | Trackable, reversible database schema migrations |
+| **Schema Migrations** | Alembic | 1.20.x | Separate operational and historical migration environments |
 | **Agent Orchestration** | LangGraph | 1.2.0 | Stateful DAG multi-agent workflow compilation |
 | **Agent Tool Abstraction** | LangChain Core | 1.7.0 | Standardized tool bindings and message abstractions |
 | **LLM Inference** | Groq Cloud API | 0.37.0 | High-speed LLM inference (`qwen/qwen3.8-27b`) |
@@ -348,24 +348,27 @@ The system employs industry-standard cryptographic security:
 ```text
 D:\Projects\Agentic AI Integrated Enterprise and Decision Support System\
 ├── backend/
-│   ├── alembic/                       # Alembic database migration scripts
+│   ├── alembic/                       # Operational Alembic environment and revisions
+│   ├── alembic_historical/            # Independent historical Alembic environment
+│   ├── alembic.ini
+│   ├── alembic_historical.ini
 │   ├── app/
 │   │   ├── agents/                    # Multi-agent architecture
 │   │   │   ├── specialized/           # 5 Domain agents (HR, Sales, Inventory, Analytics, RAG)
-│   │   │   ├── tools/                 # 21 Deterministic tool functions
+│   │   │   ├── tools/                 # 23 registered deterministic tools
 │   │   │   ├── coordinator.py         # MultiAgentCoordinator & ThreadPoolExecutor
 │   │   │   ├── llm.py                 # Multi-provider LLM factory (Groq / Gemini)
 │   │   │   ├── prompts.py             # System prompts and grounding constraints
 │   │   │   ├── state.py               # AgentState and PlannedTool Pydantic models
 │   │   │   └── supervisor.py          # LangGraph supervisor workflow & routing
-│   │   ├── api/                       # 11 REST API routers (74 operations across 58 paths)
+│   │   ├── api/                       # 10 mounted routers (62 operations across 57 API paths)
 │   │   ├── core/                      # Security, config, bootstrap, and CSV importers
 │   │   ├── db/                        # SQLAlchemy base and session configuration
 │   │   ├── models/                    # 13 Relational database entities
 │   │   ├── schemas/                   # Pydantic request and response schemas
 │   │   ├── services/                  # Business logic services (HR, Sales, Inventory, RAG, etc.)
 │   │   └── main.py                    # FastAPI application entry point and lifespan
-│   ├── tests/                         # 184 Unit and integration tests (100% passing)
+│   ├── tests/                         # V1 and Phase 1 unit/integration tests
 │   ├── .env.example                   # Sanitized configuration template
 │   └── requirements.txt               # Backend Python dependency specifications
 │
@@ -381,7 +384,13 @@ D:\Projects\Agentic AI Integrated Enterprise and Decision Support System\
 │   ├── package.json                   # Frontend npm dependencies and scripts
 │   └── vite.config.ts                 # Vite bundler configuration
 │
-├── data/                              # Data directory (SQLite database, ChromaDB, CSV datasets)
+├── data/
+│   ├── enterprise.db                 # Operational SQLite database (WAL)
+│   ├── historical.db                 # Optional; not created on application startup
+│   ├── backups/                      # Git-ignored verified local DB snapshots
+│   ├── raw/                          # Immutable future source drops by source
+│   ├── staging/                      # Local staging only; no source imports in Phase 1
+│   └── benchmarks/m5/                 # M5 remains outside both databases
 ├── docs/                              # Comprehensive documentation suite
 │   ├── SYSTEM_DOCUMENTATION.md        # Master 20-Section academic technical report
 │   ├── ARCHITECTURE.md                # System architecture specification with Mermaid diagrams
@@ -471,7 +480,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES=60
 # ==========================================
 # Database Configuration
 # ==========================================
-DATABASE_URL="sqlite:///./data/enterprise.db"
+DATABASE_URL="sqlite:///C:/path/to/project/data/enterprise.db"
+HISTORICAL_DATABASE_URL="sqlite:///C:/path/to/project/data/historical.db"
 
 # ==========================================
 # AI Provider Configuration
@@ -495,18 +505,34 @@ AGENT_TIMEOUT_SECONDS=60
 
 ## 20. Database Initialization and Seed Data
 
-Initialize the SQLite database schema and import the baseline synthetic enterprise datasets:
+Configure both SQLite URLs in `backend/.env` as absolute paths. Relative SQLite paths
+provided through `DATABASE_URL` are anchored to the active project root. For a fresh
+installation, create the operational schema with Alembic. For an existing V1 database,
+validate its schema before stamping the initial baseline; never stamp an unvalidated DB:
+
+The active operational database has been validated and upgraded through revision
+`a20d5b9e8f41`; its provenance registry is empty. `data/historical.db` remains
+uninitialized by design, and normal application startup does not create it.
 
 ```powershell
-# 1. Ensure the data directory exists
-if (!(Test-Path "data")) { New-Item -ItemType Directory -Path "data" }
-
-# 2. Run Alembic migrations to build the schema
+# Run from the project root.
 Set-Location backend
+# Existing V1 enterprise.db: validate and create a verified backup before stamping.
+..\.venv\Scripts\python.exe -m app.core.migration_baseline validate
+..\.venv\Scripts\python.exe -m app.core.backup_database
+..\.venv\Scripts\python.exe -m app.core.migration_baseline stamp
+
+# Create a fresh operational database: omit the V1 validation, backup, and stamp.
+# Run this upgrade after the V1 stamp above, or directly for a fresh database.
 ..\.venv\Scripts\python.exe -m alembic upgrade head
+
+# The historical database is independent and is not created by application startup.
+# Run this only when intentionally initializing that database:
+..\.venv\Scripts\python.exe -m alembic -c alembic_historical.ini upgrade head
+
 Set-Location ..
 
-# 3. Import baseline synthetic enterprise datasets (HR, Leaves, Inventory, Sales)
+# Import baseline operational/demo datasets only after the operational migration.
 .\.venv\Scripts\python.exe backend/app/core/import_employees.py
 .\.venv\Scripts\python.exe backend/app/core/import_leaves.py
 .\.venv\Scripts\python.exe backend/app/core/import_inventory.py
@@ -515,6 +541,17 @@ Set-Location ..
 # 4. Bootstrap the Initial Administrator Account
 # You will be prompted securely for an email and password via interactive input
 .\.venv\Scripts\python.exe -m app.core.bootstrap
+```
+
+Restore a verified backup only to a new destination file (the destination must not
+already exist); validate the restored database before redirecting `DATABASE_URL`:
+
+```powershell
+Set-Location backend
+..\.venv\Scripts\python.exe -m app.core.backup_database `
+  --restore-from "<backup-directory>\enterprise_verified.db" `
+  --restore-to "<restore-directory>\enterprise.db"
+Set-Location ..
 ```
 
 ---
@@ -554,22 +591,23 @@ npm run dev -- --host 127.0.0.1
 
 ## 23. API Documentation Links
 
-The backend exposes **74 operations across 58 paths in 11 routers**:
+The source registers **62 unique HTTP method + route combinations across 57 API paths**
+in 10 mounted routers (the HR router is mounted but currently has no route operations).
+The root and health endpoints add two more operations.
 
-| Router | Base Prefix | Operations | Core Functional Scope |
-| :--- | :--- | :---: | :--- |
-| **Authentication** | `/api/auth` | 4 | User login, registration, token refresh, and profile retrieval |
-| **Employees** | `/api/employees` | 5 | Employee CRUD and department roster lookups |
-| **HR Operations** | `/api/hr` | 6 | Department headcount analytics and leave summaries |
-| **Leaves** | `/api/leaves` | 5 | Leave application, balance tracking, and status transitions |
-| **Sales** | `/api/sales` | 7 | Customer master, order creation, and revenue aggregation |
-| **Inventory** | `/api/inventory` | 9 | Product catalog, low-stock alerts, and stock receipt/dispatch |
-| **Analytics** | `/api/analytics` | 4 | Cross-department KPI summary and executive metrics |
-| **AI Agents** | `/api/agents` | 3 | Multi-agent conversational execution and tool status |
-| **Approvals** | `/api/approvals` | 6 | Two-phase purchase requisition review and audit log |
-| **Conversations** | `/api/conversations` | 7 | Multi-turn chat persistence and message history |
-| **Documents (RAG)** | `/api/documents` | 6 | Document upload, magic-byte validation, and semantic search |
-| **Predictions** | `/api/predictions` | 3 | Sales forecasts, model comparison, and SKU shortage risks |
+| Router | Operations |
+| :--- | ---: |
+| Authentication | 4 |
+| Analytics | 9 |
+| Approvals | 10 |
+| Conversations | 5 |
+| Documents | 5 |
+| HR (mounted, empty) | 0 |
+| Inventory | 12 |
+| Predictions | 4 |
+| Sales | 12 |
+| Agents | 1 |
+| **Total** | **62** |
 
 Complete specifications, request/response schemas, and error codes are detailed in [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md).
 
@@ -594,7 +632,9 @@ npm run build --prefix frontend
 ```
 
 ### Verified Test Suite Outcomes
-- **Backend Test Suite:** **184 of 184 tests passed (100% pass rate in 98.49 seconds)**.
+- **Latest full backend runs from both project root and `backend`:** **192 passed** with no external LLM provider calls. The compound multi-agent test injects deterministic routing and synthesis fakes; each run used a disposable, migrated SQLite database and temporary Chroma storage on D:.
+- **Phase 1 database foundation:** **8 passed**, including isolated operational/historical migrations, read-only enforcement, missing-history startup, baseline validation/stamping on fixtures, and backup/restore verification.
+- **Legacy count discrepancy:** The Phase 0 recorded run reported 183 passing V1 tests, while the current checkout contains 184 pre-existing tests plus the 8 Phase 1 tests. The one-test historical discrepancy remains unresolved.
 - **Python Linter (Ruff):** Zero syntax, formatting, or unused import violations. 16 remaining `BLE001` (broad-exception catching) findings have been manually reviewed and intentionally retained to guarantee multi-agent worker failure containment and prevent worker thread exceptions from crashing the supervisor thread pool.
 - **Frontend Linter:** Oxlint verified **0 errors across all TypeScript and React files**.
 - **Production Build:** Vite production compilation (`tsc -b && vite build`) completed with 0 errors in 2.50s.
@@ -606,9 +646,9 @@ npm run build --prefix frontend
 
 For in-depth technical analysis, design justifications, and academic review, refer to the documents in `docs/`:
 
-1. **[Master System Documentation (`docs/SYSTEM_DOCUMENTATION.md`)](docs/SYSTEM_DOCUMENTATION.md):** 20-section academic project report with full mathematical formulations and architecture analysis.
+1. **[Master System Documentation (`docs/SYSTEM_DOCUMENTATION.md`)](docs/SYSTEM_DOCUMENTATION.md):** System architecture, current V1 limitations, and verified testing results.
 2. **[Architecture Specification (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md):** Detailed module structure, data flows, and 8 comprehensive Mermaid diagrams.
-3. **[REST API Specification & RBAC Matrix (`docs/API_DOCUMENTATION.md`)](docs/API_DOCUMENTATION.md):** Complete catalog of all 74 API operations, schemas, and role permissions.
+3. **[REST API Specification & RBAC Matrix (`docs/API_DOCUMENTATION.md`)](docs/API_DOCUMENTATION.md):** API contract, RBAC matrix, and audited route counts.
 4. **[Viva Defense & Demonstration Manual (`docs/VIVA_AND_DEMO_GUIDE.md`)](docs/VIVA_AND_DEMO_GUIDE.md):** 25+ academic viva defense questions, examiner trap strategies, and step-by-step role demonstration guide.
 5. **[Final Documentation Plan & Audit (`docs/FINAL_DOCUMENTATION_PLAN.md`)](docs/FINAL_DOCUMENTATION_PLAN.md):** Technical gap analysis and governance plan.
 
@@ -625,6 +665,8 @@ In compliance with strict academic and technical reporting standards, the follow
 5. **Document Ingestion Text Extraction (No OCR):** The RAG pipeline utilizes `pypdf` for programmatic text stream extraction. It does not package an optical character recognition (OCR) engine; scanned image-only PDFs without an embedded text layer are rejected.
 6. **Single-Tenant Database Design:** The application is architected for a single enterprise organization operating on a unified relational database with role-based access control.
 7. **Historical vs. Operational Sales Separation:** Bulk historical transactions (`HistoricalSale` / `data/sales.csv`) used for forecasting are maintained separately from live transactional orders (`Order` and `OrderItem`).
+8. **Legacy Historical Data Remains Operationally Co-Located:** The current V1 `historical_sales` table (15,851 rows) is still inside `enterprise.db` and linked to operational products. V2 has established the independent historical database and migration/access foundation, but source-specific data migration and operational analytics rewiring remain future, separately approved work. Do not treat this legacy table as compliant with the approved V2 historical isolation rules.
+9. **Historical Benchmark Ingestion Is Not Implemented:** UCI Online Retail II and DataCo source ingestion, explicit product mappings, keyed identifier pseudonymization, M5 Parquet preparation, and IBM HR benchmark isolation are not part of this phase.
 
 ---
 

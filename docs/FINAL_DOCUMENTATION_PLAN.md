@@ -8,6 +8,11 @@
 **Auditor:** Antigravity AI Assistant
 **Status:** Audit & Strategic Plan Complete (Awaiting User Review)
 
+> Historical V1 planning snapshot dated November 3, 2026. Its test counts, document
+> inventories, and proposed actions describe that audit date and are not current
+> V2 status. Use the root README, `SYSTEM_DOCUMENTATION.md`, `ARCHITECTURE.md`, and
+> `API_DOCUMENTATION.md` for current implementation and verification results.
+
 ---
 
 ## 1. Executive Summary & Project Sequencing

@@ -9,8 +9,7 @@ backend_dir = Path(__file__).resolve().parent.parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from app.db.base import Base
-from app.db.session import SessionLocal, engine
+from app.db.session import SessionLocal
 from app.services.inventory_service import inventory_service
 
 
@@ -33,9 +32,6 @@ def run_import(csv_path: str = "data/inventory.csv") -> int:
         )
         return 1
 
-    # Ensure tables exist
-    Base.metadata.create_all(bind=engine)
-
     db = SessionLocal()
     try:
         print(f"Starting inventory import from: {resolved_path}")
@@ -56,9 +52,6 @@ def run_import(csv_path: str = "data/inventory.csv") -> int:
 
         print("==================================================\n")
         return 0
-    except Exception as exc:
-        print(f"Fatal import error: {exc}", file=sys.stderr)
-        return 1
     finally:
         db.close()
 

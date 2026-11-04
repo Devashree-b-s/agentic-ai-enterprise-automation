@@ -10,6 +10,35 @@
 
 ---
 
+## 0. Registered Route Inventory (Audited)
+
+The currently mounted FastAPI routers expose **62 unique HTTP method + route
+combinations across 57 API paths**. The ten mounted routers group as follows;
+`/api/v1/hr` is mounted but currently registers no operations. The root and health
+endpoints add two more operations outside these router counts.
+
+| Router | Operations |
+| :--- | ---: |
+| Authentication | 4 |
+| Analytics | 9 |
+| Approvals | 10 |
+| Conversations | 5 |
+| Documents | 5 |
+| HR (mounted, empty) | 0 |
+| Inventory | 12 |
+| Predictions | 4 |
+| Sales | 12 |
+| Agents | 1 |
+| **Router total** | **62** |
+| Root and health | 2 |
+| **Application total** | **64** |
+
+Counts are unique method/route pairs; duplicate registrations do not inflate the
+totals. The checked-in FastAPI OpenAPI schema is the runtime contract. Historical
+database access is not exposed as an API or agent tool in Phase 1.
+
+---
+
 ## 1. Global API Standards & Authentication
 
 ### 1.1 Authentication Scheme

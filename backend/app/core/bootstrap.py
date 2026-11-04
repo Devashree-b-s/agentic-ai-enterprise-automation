@@ -15,8 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.db.base import Base
-from app.db.session import SessionLocal, engine
+from app.db.session import SessionLocal
 from app.models.user import User, UserRole
 
 
@@ -143,10 +142,7 @@ def main() -> None:
             )
             sys.exit(1)
 
-    # 3. Ensure tables exist
-    Base.metadata.create_all(bind=engine)
-
-    # 4. Execute bootstrap
+    # Schema creation and upgrades are managed explicitly by Alembic.
     db = SessionLocal()
     try:
         admin = bootstrap_first_admin(db, email=admin_email, password=admin_password)

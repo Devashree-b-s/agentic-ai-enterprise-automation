@@ -33,8 +33,48 @@ Ensure all business calculations, authentication flows, database migrations, API
 ---
 
 ## 3. Test Running Standard
-All backend tests will reside under `backend/tests/` and run using:
-```bash
-pytest backend/tests/ -v
+All backend tests reside under `backend/tests/`. Run them from both supported
+working directories with disposable database and Chroma locations; do not point
+test runs at `data/enterprise.db`, `data/historical.db`, or the persistent Chroma
+store. On Windows PowerShell, set the three paths to a unique temporary directory
+before each run:
+
+```powershell
+$projectRoot = (Resolve-Path ".").Path
+$projectDrive = [System.IO.Path]::GetPathRoot($projectRoot)
+$testRoot = Join-Path $projectDrive "agentic-tests-<unique-id>"
+New-Item -ItemType Directory -Path $testRoot | Out-Null
+$env:TEMP = $testRoot
+$env:TMP = $testRoot
+$env:HOME = $testRoot
+$env:USERPROFILE = $testRoot
+$env:PYTHONDONTWRITEBYTECODE = "1"
+$env:PYTHONPATH = Join-Path $projectRoot "backend"
+$env:PYTEST_ADDOPTS = ""
+$env:DATABASE_URL = "sqlite:///$($testRoot.Replace('\','/'))/enterprise.db"
+$env:HISTORICAL_DATABASE_URL = "sqlite:///$($testRoot.Replace('\','/'))/historical.db"
+$env:CHROMA_PERSIST_DIR = Join-Path $testRoot "chroma"
+$env:LLM_PROVIDER = "invalid-test-provider"
+$env:GROQ_API_KEY = ""
+$env:GEMINI_API_KEY = ""
+
+# Initialize the disposable worker database before multi-agent tests.
+Set-Location (Join-Path $projectRoot "backend")
+..\.venv\Scripts\python.exe -B -m alembic upgrade head
+
+# From backend
+..\.venv\Scripts\python.exe -B -m pytest --rootdir="$projectRoot" --confcutdir="$(Join-Path $projectRoot 'backend\tests')" tests -v
+
+# From the project root; use a fresh, separate testRoot and DB first.
+Set-Location $projectRoot
+.\.venv\Scripts\python.exe -B -m pytest backend\tests -v
+
+# After both commands complete
+Remove-Item -LiteralPath $testRoot -Recurse -Force
 ```
-No feature will be marked complete until its test suite passes with zero errors.
+
+The current checkout collects 192 tests, including 8 Phase 1 database foundation
+tests. The compound multi-agent test injects deterministic routing and synthesis
+fakes; keep provider calls disabled for automated test runs. Each full suite uses a
+migrated disposable operational database because concurrent agent workers create
+their own SQLAlchemy sessions against `DATABASE_URL`.

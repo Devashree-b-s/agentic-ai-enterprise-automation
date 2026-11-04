@@ -5,6 +5,7 @@ from pathlib import Path
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 # Base directory paths
 APP_DIR = Path(__file__).resolve().parent.parent
@@ -15,6 +16,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 # Ensure data directory exists
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_DB_FILE = DATA_DIR / "enterprise.db"
+DEFAULT_HISTORICAL_DB_FILE = DATA_DIR / "historical.db"
 
 INSECURE_DEV_SECRET = "insecure-dev-secret-key-change-in-production-32bytes"
 
@@ -29,12 +31,17 @@ class Settings(BaseSettings):
 
     # Database configuration: defaults to SQLite inside the /data directory
     DATABASE_URL: str = f"sqlite:///{DEFAULT_DB_FILE.as_posix()}"
+    HISTORICAL_DATABASE_URL: str = f"sqlite:///{DEFAULT_HISTORICAL_DB_FILE.as_posix()}"
 
     # Secret key for JWT tokens
     SECRET_KEY: str = INSECURE_DEV_SECRET
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+    ]
 
     # Optional initial administrator bootstrap credentials
     FIRST_SUPERUSER_EMAIL: str | None = None
@@ -67,6 +74,21 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def resolve_database_paths(self) -> "Settings":
+        """Anchor relative SQLite database URLs to the project root."""
+        for field_name in ("DATABASE_URL", "HISTORICAL_DATABASE_URL"):
+            url = make_url(getattr(self, field_name))
+            if not url.drivername.startswith("sqlite") or not url.database:
+                continue
+            database = Path(url.database)
+            if url.database == ":memory:" or database.is_absolute():
+                continue
+            absolute_path = (PROJECT_ROOT / database).resolve()
+            normalized = url.set(database=absolute_path.as_posix())
+            setattr(self, field_name, normalized.render_as_string(hide_password=False))
+        return self
 
     @model_validator(mode="after")
     def validate_production_security(self) -> "Settings":

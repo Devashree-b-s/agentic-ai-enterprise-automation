@@ -36,14 +36,14 @@
 | **Core Architecture** | Multi-Tier Enterprise SPA + Fast-API Backend + LangGraph Multi-Agent Orchestrator + ChromaDB Vector Store |
 | **LLM Inference Engines** | Groq Cloud API (`qwen/qwen3.8-27b`) with automatic fallback to Google GenAI (`gemini-1.5-flash`) |
 | **Agent Topology** | Hierarchical Supervisor (`SupervisorAgent`) delegating to 5 Specialized Domain Agents (`HR`, `Sales`, `Inventory`, `Analytics`, `Documents`) |
-| **Tool Inventory** | **21 Deterministic Tools** (5 HR, 4 Sales, 4 Inventory, 5 Analytics, 3 RAG) calling compiled Python services |
-| **Database & Concurrency** | SQLite 3 in **WAL Mode** (Write-Ahead Logging) via SQLAlchemy 2.0 ORM with thread-local sessions |
+| **Tool Inventory** | **23 Deterministic Tools** (5 HR, 4 Sales, 4 Inventory, 3 Analytics, 1 RAG, 3 Forecast, 3 HITL) calling compiled Python services |
+| **Database & Concurrency** | Separate operational `enterprise.db` and optional historical `historical.db`; SQLite WAL, independent Alembic/provenance, read-only historical runtime |
 | **RAG Pipeline** | Recursive character chunking (500 tokens, 50-token overlap), ChromaDB cosine distance similarity, magic header validation |
 | **Predictive Analytics** | Chronological 4-month train vs 2-month test split, 4 competing models (Naive, SMA-3, OLS, Holt's), lowest RMSE selection |
 | **HITL Governance** | Two-phase commit approval engine: Requisitions > $5,000 or by non-executives trigger pending review state |
 | **Authentication & RBAC** | Argon2id password hashing (`time_cost=3`, `memory_cost=65536`), PyJWT HS256 tokens, 4 application roles |
-| **Test Suite Coverage** | **184 of 184 backend tests passed (100% pass rate in 98.49s)**, 0 Oxlint/Ruff linting errors, Playwright E2E browser tests |
-| **API Surface** | **74 operations across 58 paths in 11 FastAPI routers** |
+| **Test Suite Coverage** | Current checkout: **192 passed** from both supported directories; deterministic agent fakes, no provider calls; 8 Phase 1 database foundation tests pass |
+| **API Surface** | **62 unique router method/route pairs across 57 API paths and 10 mounted routers**, plus root and health |
 
 ---
 
@@ -236,8 +236,10 @@
 
 #### Q20: What is your automated test coverage and how did you verify system reliability?
 > **Model Answer:**
-> Our automated test suite comprises **184 unit and integration tests** located in `backend/tests/`:
-> - 100% test pass rate (**184 passed in 98.49 seconds**).
+> The current checkout collects **192 unit and integration tests** in `backend/tests/`:
+> - Both full-suite runs completed **192 passed** with external provider calls disabled. The compound multi-agent test injects deterministic routing and synthesis fakes.
+> - All **8 Phase 1 database foundation tests** passed independently.
+> - Phase 0 recorded 183 passing V1 tests, while the current checkout contains 184 pre-existing tests. This one-test count difference remains unresolved.
 > - Test coverage spans:
 >   1. `test_auth.py`: JWT token generation, expiration, invalid signatures, Argon2id verification.
 >   2. `test_hr_services.py`: Employee CRUD, leave balance decrement logic, leave policy limits.
@@ -372,7 +374,7 @@ Use this cheat sheet to instantly navigate files during the viva if an examiner 
 | **Concurrent Coordinator** | `backend/app/agents/coordinator.py` | `MultiAgentCoordinator`, `coordinate_execution()`, `_execute_agent_worker()` |
 | **LLM Provider Factory** | `backend/app/agents/llm.py` | `get_chat_model()`, `_build_groq_model()`, `_build_gemini_model()` |
 | **Agent State Schema** | `backend/app/agents/state.py` | `AgentState`, `PlannedTool`, `SupervisorDecision` |
-| **21 Business Tools** | `backend/app/agents/tools/*.py` | `hr_tools.py`, `sales_tools.py`, `inventory_tools.py`, `analytics_tools.py`, `rag_tools.py` |
+| **23 Business Tools** | `backend/app/agents/tools/*.py` | HR (5), Sales (4), Inventory (4), Analytics (3), RAG (1), Forecast (3), HITL (3) |
 | **Vector DB (ChromaDB)** | `backend/app/services/chroma_service.py` | `ChromaService`, `query_similar_chunks()`, `index_document()` |
 | **Magic Header Parser** | `backend/app/services/document_parser.py` | `DocumentParser`, `validate_file_magic()`, `chunk_text()` |
 | **HITL Approvals Engine** | `backend/app/services/approval_service.py` | `create_requisition()`, `review_approval()`, `execute_approved_action()` |
@@ -382,7 +384,7 @@ Use this cheat sheet to instantly navigate files during the viva if an examiner 
 | **Frontend Route Guard** | `frontend/src/components/auth/ProtectedRoute.tsx` | `ProtectedRoute` |
 | **Frontend Auth Store** | `frontend/src/store/auth.store.ts` | `useAuthStore` (Zustand state & token storage) |
 | **Database Migrations** | `backend/alembic/versions/*.py` | Alembic migration scripts |
-| **Unit & E2E Tests** | `backend/tests/` | 184 tests across `test_auth.py`, `test_predictions.py`, `test_multi_agent.py`, etc. |
+| **Unit & E2E Tests** | `backend/tests/` | 192 collected, including 8 Phase 1 database foundation tests |
 
 ---
 *End of Master Viva Defense & Live Demonstration Guide.*

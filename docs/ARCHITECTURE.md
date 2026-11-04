@@ -52,7 +52,7 @@ flowchart TD
             AgentSales["SalesAgent"]
         end
 
-        ToolRegistry["Typed Agent Tool Registry (21 Deterministic Tools)"]
+        ToolRegistry["Typed Agent Tool Registry (23 Deterministic Tools)"]
         FallbackSynthesizer["Deterministic Fallback Synthesizer"]
 
         Supervisor --> Coordinator
@@ -62,7 +62,8 @@ flowchart TD
     end
 
     subgraph Persistence_Tier ["Data Persistence Layer"]
-        SQLiteDB[("SQLite 3 Database (enterprise.db in WAL mode)")]
+        OperationalDB[("enterprise.db (operational, SQLite WAL)")]
+        HistoricalDB[("historical.db (separate, optional, runtime read-only)")]
         ChromaStore[("ChromaDB Vector Store (enterprise_knowledge_base)")]
     end
 
@@ -75,7 +76,8 @@ flowchart TD
     RBAC --> Service_Tier
     RBAC --> Supervisor
     ToolRegistry --> Service_Tier
-    Service_Tier --> SQLiteDB
+    Service_Tier --> OperationalDB
+    HistoricalDB -. "No historical runtime tools or source tables implemented yet" .-> ToolRegistry
     DocService --> ChromaStore
     AgentDoc --> ChromaStore
     Supervisor --> GroqAPI
@@ -163,7 +165,7 @@ backend/app/
 │   │   ├── hr_agent.py        # HRAgent (Headcount, leaves, staffing)
 │   │   ├── inventory_agent.py # InventoryAgent (Stock levels, low-stock alerts)
 │   │   └── sales_agent.py     # SalesAgent (Revenue, order trends)
-│   └── tools/                 # 21 Deterministic Tool Implementations
+│   └── tools/                 # 23 registered deterministic tool implementations
 │
 ├── services/                  # Deterministic Business Services Layer
 │   ├── analytics_service.py   # Cross-department correlation calculations
@@ -250,7 +252,7 @@ The state flowing through the graph contains:
 
 ## 5. Agent Tools & Execution Flow
 
-The system provides **21 typed, deterministic tools** categorized across enterprise domains:
+The system registers **23 typed, deterministic tools** categorized across enterprise domains:
 
 | Domain | Tool Name | Function & Safety Scope |
 | :--- | :--- | :--- |
@@ -377,7 +379,7 @@ The predictive analytics module evaluates four competing time-series forecasting
 
 ```mermaid
 flowchart TD
-    HistoricalSales[("historical_sales (15,851 rows, May-Oct 2026)")] --> MonthlyAggregate[Aggregate Monthly Recognized Revenue]
+    LegacySales[("V1 historical_sales (15,851 rows, May-Oct 2026; still in enterprise.db)")] --> MonthlyAggregate[Legacy monthly aggregate]
 
     MonthlyAggregate --> Split{Chronological Split}
     Split -->|First 4 Months (May-Aug 2026)| TrainSet[Training Set: 4 Observations]
@@ -409,7 +411,9 @@ flowchart TD
 
 ## 10. Database Entity-Relationship (ER) Architecture
 
-The complete relational schema comprises 13 database entities in `enterprise.db`.
+The V1 domain schema comprises 13 entities in `enterprise.db`. Phase 1 adds a
+provenance registry and independent migration metadata; it does not migrate the
+legacy historical rows or introduce UCI/DataCo transaction tables.
 
 ```mermaid
 erDiagram
@@ -582,6 +586,51 @@ erDiagram
     }
 ```
 
+### V2 Database Foundation and Migration Boundaries
+
+- `DATABASE_URL` selects the operational SQLite database. Relative SQLite file paths
+  are normalized to the project root; deployments should configure absolute paths.
+- `HISTORICAL_DATABASE_URL` selects the separate `data/historical.db`. The file is
+  optional and is not created or opened during normal application startup. Runtime
+  historical connections use SQLite `mode=ro` and `PRAGMA query_only=ON`.
+- Operational and historical databases have independent Alembic environments,
+  version tables, and provenance batch registries. No cross-database foreign keys
+  are permitted. Migrations are explicit; application startup does not call
+  `metadata.create_all()`.
+- The active `enterprise.db` was validated, stamped at `71a342e826c8`, and upgraded
+  to `a20d5b9e8f41`. Existing V1 table row counts are unchanged; the new operational
+  provenance registry is empty. `historical.db` remains absent.
+- Every provenance batch records its source name, source filename and SHA-256,
+  counts, status, timestamps, mappings, and transformation metadata. Source files
+  remain immutable; future imports use dedicated writer connections and are
+  reproducible from checksummed inputs.
+- A no-overwrite SQLite online-backup command verifies database integrity, tables,
+  row counts, and SHA-256. Restore is permitted only to a new destination file and
+  is verified before use.
+- **Known V1 boundary:** the current 15,851-row `historical_sales` table remains in
+  `enterprise.db` and has operational product references. It is legacy-only and
+  does not satisfy the approved V2 isolation model. Moving source-specific data and
+  rewiring analytics require separate future ingestion work; Phase 1 does not
+  perform that migration.
+- Approved future ingestion policy: UCI Online Retail II remains GBP and DataCo
+  remains USD; currencies are never converted during ingestion. Preserve source
+  identifiers as text where needed, cancellation/return flags, source and batch
+  provenance, and null UCI customer IDs with a guest flag. DataCo drops unnecessary
+  PII and pseudonymizes required identifiers with keyed HMAC. Historical data cannot
+  mutate operational stock, approvals, or workflows. Only explicit confirmed SKU
+  mappings may join external products to the 30 existing operational SKUs. Keep UCI,
+  DataCo, and 2026 operational series separate; reports show native-currency totals
+  and time series separately. Any future consolidated report requires documented
+  exchange rates and conversion dates.
+- Future historical indexes cover date, product, customer, and invoice fields where
+  available. Every historical tool labels its source and covered period. Phase 8
+  ingestion verification compares batch IDs, source checksums, and imported row
+  counts.
+- M5 remains outside both databases in `data/benchmarks/m5/` as Parquet with
+  chronological train/test evaluation. IBM HR remains an isolated benchmark and
+  never populates operational employee or salary data. Supplier-delay scenarios
+  must be explicitly labelled synthetic rather than attributed to DataCo shipping.
+
 ---
 
 ## 11. System Limitations & Boundary Conditions
@@ -590,3 +639,4 @@ erDiagram
 2. **Absence of PDF OCR:** Ingestion pipeline parses native vector text streams. Scanned rasterized PDFs without an embedded text layer are rejected.
 3. **Forecasting Dataset Duration:** 6 monthly observations. Conclusive annual seasonality requires a minimum of 24 months of data.
 4. **Single-Tenant Architecture:** The application operates on a single enterprise organization schema; it does not feature multi-tenant SaaS schema isolation.
+5. **Legacy Historical Data Boundary:** The V1 `historical_sales` data remains in the operational database until a separately scoped and validated migration. New historical datasets have not been ingested.

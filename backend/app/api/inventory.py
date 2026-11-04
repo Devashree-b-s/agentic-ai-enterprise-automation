@@ -1,9 +1,11 @@
 """Inventory API router exposing endpoints for Products, Stock Operations, Alerts, and Reports."""
 
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.core.config import PROJECT_ROOT
 from app.core.deps import DbSession, require_roles
 from app.models.user import User, UserRole
 from app.schemas.inventory import (
@@ -288,4 +290,7 @@ def import_inventory_csv(
     ] = "data/inventory.csv",
 ) -> CSVImportSummary:
     """Trigger CSV import."""
-    return inventory_service.import_csv(db, file_path, user_id=current_user.id)
+    csv_path = Path(file_path)
+    if not csv_path.is_absolute():
+        csv_path = PROJECT_ROOT / csv_path
+    return inventory_service.import_csv(db, csv_path, user_id=current_user.id)

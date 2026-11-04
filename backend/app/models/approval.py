@@ -68,9 +68,7 @@ class ApprovalRequest(Base):
     request_code: Mapped[str] = mapped_column(
         String(50), unique=True, index=True, nullable=False
     )
-    request_type: Mapped[str] = mapped_column(
-        String(50), index=True, nullable=False
-    )
+    request_type: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 

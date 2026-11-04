@@ -19,7 +19,9 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    title: Mapped[str] = mapped_column(String(255), default="New Conversation", nullable=False)
+    title: Mapped[str] = mapped_column(
+        String(255), default="New Conversation", nullable=False
+    )
     user_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -63,14 +65,20 @@ class ConversationMessage(Base):
         index=True,
         nullable=False,
     )
-    role: Mapped[str] = mapped_column(String(20), nullable=False)  # 'user' | 'assistant'
+    role: Mapped[str] = mapped_column(
+        String(20), nullable=False
+    )  # 'user' | 'assistant'
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
     # Tool execution and attribution metadata
-    departments_used: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON list
+    departments_used: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # JSON list
     tools_used: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON list
     source_attribution: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    citations: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON list of dicts
+    citations: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # JSON list of dicts
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,

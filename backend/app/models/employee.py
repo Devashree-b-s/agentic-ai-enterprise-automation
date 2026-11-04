@@ -34,7 +34,7 @@ class Employee(Base):
 
     __tablename__ = "employees"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, nullable=False)
     employee_id: Mapped[str] = mapped_column(
         String(50), unique=True, index=True, nullable=False
     )
@@ -46,7 +46,9 @@ class Employee(Base):
     department: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     role: Mapped[str] = mapped_column(String(100), nullable=False)
     salary: Mapped[float | None] = mapped_column(Float, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="1", nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=func.now(),
