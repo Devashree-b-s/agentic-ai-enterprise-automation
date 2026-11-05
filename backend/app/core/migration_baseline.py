@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
@@ -11,17 +12,20 @@ from sqlalchemy import Float, MetaData, Numeric, create_engine, inspect, text
 from sqlalchemy.engine import URL, make_url
 
 import app.models  # noqa: F401
-from alembic import command
 from app.core.config import BACKEND_DIR, settings
 from app.db.base import Base
 
 PROVENANCE_TABLE = "data_provenance_batches"
+AGENT_RUNS_TABLE = "agent_runs"
 ALEMBIC_VERSION_TABLE = "alembic_version"
 BASELINE_REVISION = "71a342e826c8"
 
 
 def _include_object(object_, name, type_, reflected, compare_to):
-    return not (type_ == "table" and name in (PROVENANCE_TABLE, ALEMBIC_VERSION_TABLE))
+    return not (
+        type_ == "table"
+        and name in (PROVENANCE_TABLE, AGENT_RUNS_TABLE, ALEMBIC_VERSION_TABLE)
+    )
 
 
 def _compare_type(

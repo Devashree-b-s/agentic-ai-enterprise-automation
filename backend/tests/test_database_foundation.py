@@ -156,12 +156,17 @@ def test_operational_migrations_upgrade_downgrade_and_reupgrade(tmp_path):
         assert inspector.has_table("alembic_version")
         assert validate_existing_schema(database_url) == []
         assert inspector.get_foreign_keys("data_provenance_batches") == []
+        agent_run_foreign_keys = inspector.get_foreign_keys("agent_runs")
+        assert {
+            (foreign_key["constrained_columns"][0], foreign_key["options"]["ondelete"])
+            for foreign_key in agent_run_foreign_keys
+        } == {("user_id", "SET NULL"), ("conversation_id", "SET NULL")}
         with engine.connect() as connection:
             assert (
                 connection.exec_driver_sql(
                     "SELECT version_num FROM alembic_version"
                 ).scalar_one()
-                == "c42b67d91e20"
+                == "f9a4c27d81b0"
             )
 
         command.downgrade(config, "base")

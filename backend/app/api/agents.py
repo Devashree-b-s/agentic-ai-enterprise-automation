@@ -2,12 +2,16 @@
 
 import logging
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.agents.supervisor import run_supervisor_chat
 from app.core.config import settings
 from app.core.deps import CurrentUser, DbSession
 from app.schemas.agent import AgentChatRequest, AgentChatResponse
+from app.services.agent_run_service import (
+    AgentRunPersistenceError,
+    agent_run_service,
+)
 from app.services.conversation_service import conversation_service
 
 logger = logging.getLogger("app.api.agents")
@@ -67,18 +71,59 @@ def chat_with_supervisor(
         len(request.message),
     )
 
-    # 3. Execute Supervisor workflow with context
-    response = run_supervisor_chat(
-        query=request.message,
-        db=db,
-        current_user=current_user,
-        history=history_turns,
-    )
+    # 3. Persist tracking before execution; do not execute if tracking is unavailable.
+    try:
+        run = agent_run_service.create_running(
+            db,
+            user_id=current_user.id,
+            conversation_id=conv.id,
+        )
+    except AgentRunPersistenceError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Agent run tracking is temporarily unavailable.",
+        ) from None
 
-    # 4. Attach conversation_id to response
+    # 4. Execute the supervisor and persist only bounded execution metadata.
+    try:
+        response = run_supervisor_chat(
+            query=request.message,
+            db=db,
+            current_user=current_user,
+            history=history_turns,
+        )
+    except Exception:  # noqa: BLE001 - contain workflow failures without exposing details
+        response = AgentChatResponse(
+            answer="An error occurred while processing your request. Please try again later.",
+            success=False,
+            error="Internal agent execution error.",
+        )
+
+    try:
+        if response.success:
+            agent_run_service.mark_completed(db, run, response)
+        else:
+            agent_run_service.mark_failed(db, run, "Agent execution failed.")
+    except AgentRunPersistenceError:
+        if response.success:
+            try:
+                agent_run_service.mark_failed(
+                    db, run, "Execution result could not be recorded."
+                )
+            except AgentRunPersistenceError:
+                logger.error(
+                    "Agent run tracking could not record terminal status for run_id=%s",
+                    run.id,
+                )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Agent run tracking is temporarily unavailable.",
+        ) from None
+
+    # 5. Attach conversation_id to response
     response.conversation_id = conv.id
 
-    # 5. Persist user message and assistant answer atomically
+    # 6. Persist user message and assistant answer atomically
     try:
         conversation_service.add_message(
             db=db,
@@ -96,7 +141,7 @@ def chat_with_supervisor(
             source_attribution=response.source_attribution,
             citations=response.citations,
         )
-    except Exception as exc:
-        logger.error("Failed to persist conversation messages for conv_id=%s: %s", conv.id, exc)
+    except Exception:  # noqa: BLE001 - preserve the established chat response on persistence errors
+        logger.error("Failed to persist conversation messages for conv_id=%s", conv.id)
 
     return response

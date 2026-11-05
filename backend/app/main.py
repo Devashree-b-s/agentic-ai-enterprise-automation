@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.agent_runs import router as agent_runs_router
 from app.api.agents import router as agents_router
 from app.api.analytics import router as analytics_router
 from app.api.approvals import router as approvals_router
@@ -72,6 +73,7 @@ app.include_router(inventory_router, prefix="/api/v1/inventory")
 app.include_router(sales_router, prefix="/api/v1/sales")
 app.include_router(analytics_router, prefix="/api/v1/analytics")
 app.include_router(agents_router, prefix="/api/v1")
+app.include_router(agent_runs_router, prefix="/api/v1")
 app.include_router(conversations_router, prefix="/api/v1")
 app.include_router(approvals_router, prefix="/api/v1")
 app.include_router(predictions_router, prefix="/api/v1")

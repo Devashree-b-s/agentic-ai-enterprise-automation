@@ -1,5 +1,6 @@
 """SQLAlchemy database models."""
 
+from app.models.agent_run import AgentRun, AgentRunStatus
 from app.models.approval import (
     ApprovalAudit,
     ApprovalRequest,
@@ -16,6 +17,8 @@ from app.models.sales import Customer, Order, OrderItem, OrderStatus
 from app.models.user import User, UserRole
 
 __all__ = [
+    "AgentRun",
+    "AgentRunStatus",
     "ApprovalAudit",
     "ApprovalRequest",
     "ApprovalRequestType",
