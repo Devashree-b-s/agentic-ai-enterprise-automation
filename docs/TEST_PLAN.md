@@ -30,6 +30,18 @@ Ensure all business calculations, authentication flows, database migrations, API
 ### Level 5: Frontend Testing (Phase 11+)
 - Vitest and React Testing Library for UI components and API client integration.
 
+### Level 6: Dataset Ingestion Foundation
+- Use only small synthetic CSV and XLSX fixtures; never use downloaded benchmark
+  datasets in routine tests.
+- Cover required headers, worksheet selection, data types, malformed rows,
+  configured business-key duplicates, SHA-256 provenance, completed-batch
+  idempotency, failed-batch retry, transaction rollback, bounded rejection
+  reporting, batch status transitions, explicit target isolation, path/size and
+  file-format checks, HMAC hooks, and chunked processing.
+- Create isolated SQLite target tables and provenance registries per test. Do not
+  initialize either project database or invoke application startup for ingestion
+  unit tests.
+
 ---
 
 ## 3. Test Running Standard
@@ -73,8 +85,10 @@ Set-Location $projectRoot
 Remove-Item -LiteralPath $testRoot -Recurse -Force
 ```
 
-The current checkout collects 192 tests, including 8 Phase 1 database foundation
-tests. The compound multi-agent test injects deterministic routing and synthesis
-fakes; keep provider calls disabled for automated test runs. Each full suite uses a
-migrated disposable operational database because concurrent agent workers create
-their own SQLAlchemy sessions against `DATABASE_URL`.
+The current checkout collects 214 tests, including 8 Phase 1 database foundation
+tests and 22 Phase 2 ingestion tests (one symlink test may be skipped when Windows
+does not permit symlink creation). The compound multi-agent test injects
+deterministic routing and synthesis fakes; keep provider calls disabled for
+automated test runs. Each full suite uses a migrated disposable operational
+database because concurrent agent workers create their own SQLAlchemy sessions
+against `DATABASE_URL`.

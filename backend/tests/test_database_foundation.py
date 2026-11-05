@@ -3,16 +3,11 @@
 import sqlite3
 from pathlib import Path
 
-import pytest
-from alembic.config import Config
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, inspect
-from sqlalchemy.engine import make_url
-from sqlalchemy.exc import OperationalError
-
 import app.models
 import app.models.historical_provenance
+import pytest
 from alembic import command
+from alembic.config import Config
 from app.core.backup_database import (
     create_database_backup,
     restore_database_backup,
@@ -32,6 +27,10 @@ from app.db.historical import (
 )
 from app.db.historical_base import HistoricalBase
 from app.main import app
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, inspect
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import OperationalError
 
 
 def _sqlite_url(path: Path) -> str:
@@ -162,7 +161,7 @@ def test_operational_migrations_upgrade_downgrade_and_reupgrade(tmp_path):
                 connection.exec_driver_sql(
                     "SELECT version_num FROM alembic_version"
                 ).scalar_one()
-                == "a20d5b9e8f41"
+                == "c42b67d91e20"
             )
 
         command.downgrade(config, "base")

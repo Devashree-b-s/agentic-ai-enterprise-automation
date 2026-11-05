@@ -6,7 +6,7 @@
 [![React Version](https://img.shields.io/badge/React-19.3-61DAFB.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4.3-38B2AC.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Tests](https://img.shields.io/badge/Tests-192%20passed%20(100%25)-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-213%20passed%20(1%20skipped)-brightgreen.svg)]()
 [![Code Quality](https://img.shields.io/badge/Linters-Ruff%20(16%20BLE001%20Reviewed)%20%7C%20Oxlint-blueviolet.svg)]()
 
 > A completed development prototype for an autonomous multi-agent enterprise operational and decision-support platform integrating **Human Resources (HR)**, **Sales Operations**, and **Inventory Management** with a **LangGraph Multi-Agent Orchestrator**, private **ChromaDB Document Intelligence (RAG)**, automated **Human-in-the-Loop (HITL) Approvals**, and empirical **Time-Series Predictive Forecasting**. *(Production deployment is pending scheduled hosting rollout).*
@@ -513,6 +513,9 @@ validate its schema before stamping the initial baseline; never stamp an unvalid
 The active operational database has been validated and upgraded through revision
 `a20d5b9e8f41`; its provenance registry is empty. `data/historical.db` remains
 uninitialized by design, and normal application startup does not create it.
+Phase 2 adds forward-only ingestion tracking revisions; they have not been applied
+to the project operational database. Apply migrations explicitly to the intended
+database before configuring an ingestion target.
 
 ```powershell
 # Run from the project root.
@@ -553,6 +556,30 @@ Set-Location backend
   --restore-to "<restore-directory>\enterprise.db"
 Set-Location ..
 ```
+
+### Reusable Dataset Ingestion Foundation
+
+The internal `app.ingestion.IngestionService` supports streaming CSV and XLSX
+inputs. It is not exposed as an unauthenticated upload endpoint. Callers must
+explicitly configure a target database, allowed source roots, target table schema,
+source-to-target mappings, business keys, and a source declaration. The service
+validates file format and size, headers, worksheet selection, types, nullability,
+malformed rows, and duplicate keys; applies configured transformations; then loads
+accepted rows and completes the provenance batch atomically.
+
+Each batch tracks its dataset identifier, original filename, SHA-256, source
+declaration, database target, rows read/accepted/rejected, status, mappings, and
+validation summary. Identical completed files are idempotent. Failed loads roll
+back target rows and can be retried. Rejection reports are structured and bounded;
+values are omitted by default and always redacted for sensitive columns. The
+framework supports configured column exclusion and keyed HMAC pseudonymization.
+
+No UCI Online Retail II, DataCo, IBM HR, or M5 data has been imported. Do not create
+dataset-specific historical tables or initialize the optional historical database
+as part of normal startup. Future source-specific mappings and schema revisions
+must be reviewed separately; DataCo mappings must exclude unnecessary PII. The
+historical writer engine is created only by an explicit ingestion caller, while
+runtime historical access remains read-only.
 
 ---
 
@@ -632,7 +659,8 @@ npm run build --prefix frontend
 ```
 
 ### Verified Test Suite Outcomes
-- **Latest full backend runs from both project root and `backend`:** **192 passed** with no external LLM provider calls. The compound multi-agent test injects deterministic routing and synthesis fakes; each run used a disposable, migrated SQLite database and temporary Chroma storage on D:.
+- **Latest full backend runs from both project root and `backend`:** **213 passed, 1 skipped** with no external LLM provider calls. The compound multi-agent test injects deterministic routing and synthesis fakes; each run used a disposable, migrated SQLite database and temporary Chroma storage on D:. The symlink test is skipped when Windows does not permit creating the fixture symlink.
+- **Phase 2 ingestion foundation:** **21 passed, 1 skipped** using synthetic fixtures, covering CSV/XLSX validation, staging/loading, provenance, retries, rollback, idempotency, privacy hooks, schema matching, concurrency, and target isolation. Actual benchmark datasets were not imported.
 - **Phase 1 database foundation:** **8 passed**, including isolated operational/historical migrations, read-only enforcement, missing-history startup, baseline validation/stamping on fixtures, and backup/restore verification.
 - **Legacy count discrepancy:** The Phase 0 recorded run reported 183 passing V1 tests, while the current checkout contains 184 pre-existing tests plus the 8 Phase 1 tests. The one-test historical discrepancy remains unresolved.
 - **Python Linter (Ruff):** Zero syntax, formatting, or unused import violations. 16 remaining `BLE001` (broad-exception catching) findings have been manually reviewed and intentionally retained to guarantee multi-agent worker failure containment and prevent worker thread exceptions from crashing the supervisor thread pool.

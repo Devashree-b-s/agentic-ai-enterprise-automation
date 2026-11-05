@@ -179,6 +179,7 @@ backend/app/
 │   ├── rag_synthesizer.py     # Document citation and snippet synthesis
 │   └── sales_service.py       # Order confirmation deduction, revenue aggregation
 │
+├── ingestion/                 # Explicit-target CSV/XLSX validation, staging, and loading
 ├── models/                    # SQLAlchemy 2.0 Relational Models
 ├── schemas/                   # Pydantic v2 Validation Schemas
 ├── core/                      # Configuration, Security & Migrations
@@ -607,6 +608,26 @@ erDiagram
 - A no-overwrite SQLite online-backup command verifies database integrity, tables,
   row counts, and SHA-256. Restore is permitted only to a new destination file and
   is verified before use.
+- Phase 2 provides an internal reusable ingestion service, not an unauthenticated
+  upload endpoint. Each invocation supplies an explicit operational or historical
+  target, an allowlisted source root, a declared dataset schema, and a source
+  declaration. CSV is parsed incrementally; XLSX is read-only and streamed by
+  worksheet. Extension/content checks, required headers, types, nullability,
+  malformed rows, and configured business keys are validated before target rows
+  are committed.
+- Ingestion uses a bounded, transaction-scoped SQLite staging table. Invalid rows
+  produce bounded structured rejection details; original values are omitted unless
+  explicitly approved for a non-sensitive mapping. Loading and the COMPLETED batch
+  update share one transaction. Failure rolls back target data and records FAILED;
+  a failed checksum batch can be retried, while a completed checksum is idempotent.
+  The provenance registry stores dataset ID, filename, SHA-256, source declaration,
+  target label, counts, status, mappings, and validation summary.
+- Historical writer-engine construction is explicit and separate from the
+  read-only runtime engine. The service never creates a target schema, picks a
+  database implicitly, adds cross-database foreign keys, or imports a dataset at
+  startup. Dataset-specific mappings and transformation policies remain outside
+  the generic engine. Excluded columns and keyed HMAC hooks support future
+  privacy-safe DataCo mappings; personal values are not written to logs.
 - **Known V1 boundary:** the current 15,851-row `historical_sales` table remains in
   `enterprise.db` and has operational product references. It is legacy-only and
   does not satisfy the approved V2 isolation model. Moving source-specific data and

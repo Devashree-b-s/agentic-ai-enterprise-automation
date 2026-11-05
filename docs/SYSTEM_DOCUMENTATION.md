@@ -454,14 +454,19 @@ erDiagram
 
 ### V2.0 Database Foundation and Approved Data Boundaries
 
-Phase 1 establishes the migration, configuration, backup, read-only access, and
-provenance foundation only. It does not import UCI Online Retail II, DataCo, M5, or
-IBM HR data, and does not migrate V1 rows from `historical_sales`.
+Phase 1 established the migration, configuration, backup, read-only access, and
+provenance foundation. Phase 2 adds a generic ingestion service and batch tracking;
+neither phase imports UCI Online Retail II, DataCo, M5, or IBM HR data, nor migrates
+V1 rows from `historical_sales`.
 
 The active operational database was validated against the reviewed V1 baseline,
 stamped at `71a342e826c8`, and upgraded to `a20d5b9e8f41`. Its provenance registry is
 empty. The optional historical database remains absent, which is supported by
 application startup and the historical availability helper.
+Phase 2 added operational revision `c42b67d91e20` and historical revision
+`d83f20a5c1b4` for ingestion batch tracking. They were validated on disposable
+test databases and have not been applied to the project databases. Migration and
+historical-file initialization remain explicit operator actions.
 
 - `enterprise.db` remains the operational database. `historical.db` is a separate,
   optional file with an independent Alembic environment/version table and provenance
@@ -502,6 +507,22 @@ application startup and the historical availability helper.
 - Existing V1 databases are validated against the checked-in baseline before
   stamping. Never edit historical revisions; subsequent schema changes use new
   revisions. Create a verified online backup before applying operational migrations.
+- Phase 2 adds an internal reusable CSV/XLSX ingestion foundation; it does not
+  import any of the located UCI, DataCo, IBM HR, or M5 files. Callers must select
+  the operational or historical target explicitly, configure an allowed source
+  root, and provide dataset-specific column mappings and business keys. The
+  service streams input into a bounded temporary staging table, validates
+  headers/types/nullability/duplicates, applies configured transformations, and
+  writes accepted rows plus the final provenance status atomically. File SHA-256
+  checksums provide idempotency; failed batches can be retried after rollback.
+  Rejection reports are structured and bounded, with source values redacted by
+  default and always redacted for sensitive columns.
+- Historical ingestion uses an explicitly created writer engine only when a
+  caller requests it. Runtime historical access remains read-only. No API accepts
+  arbitrary filesystem paths, no dataset-specific historical tables are created
+  in this phase, and no dataset import can trigger operational workflows. Future
+  DataCo mappings must exclude unnecessary PII and use keyed HMAC pseudonyms only
+  for identifiers demonstrably required by shipping analysis.
 
 ---
 
@@ -833,27 +854,33 @@ flowchart TD
 The platform has been subjected to rigorous verification across multiple testing tiers.
 
 ### 19.1 Automated Backend Test Suite (Pytest)
-The current checkout collects **192 tests** across the existing V1 suite and the
-Phase 1 database foundation tests. Full-suite verification was run from the project
+The current checkout collects **214 tests** across the existing backend suite and
+the Phase 1/Phase 2 foundation tests. Full-suite verification was run from the project
 root and backend directory with disposable, migrated SQLite and Chroma paths,
 external provider calls disabled, and deterministic test model injection:
 
 ```text
-192 collected
-192 passed
+214 collected
+213 passed
+1 skipped (Windows symlink creation unavailable)
 ```
 
 - The compound multi-agent test injects deterministic routing and synthesis fakes.
   Its database workers use the isolated migrated SQLite URL, so no provider call or
   production credential is required.
 - **Phase 1 focused suite:** 8 database foundation tests passed.
+- **Phase 2 focused suite:** 21 passed and 1 skipped across synthetic ingestion
+  tests. The symlink fixture was skipped because this Windows environment denied
+  symlink creation. No downloaded
+  UCI, DataCo, IBM HR, or M5 file was used.
 - **Additional checks:** live V1 schema baseline validation passed; targeted
   inventory import path, migration, backup/restore, read-only access, and startup
   tests passed.
 - **V1 count discrepancy:** the Phase 0 recorded successful run reported 183 tests,
   while the current checkout contains 184 pre-existing tests. The one-test
   historical collection difference remains unresolved. Both final full runs used
-  disposable database and Chroma paths on D: and produced the same 192/192 result.
+  disposable database and Chroma paths on D: and produced the same 213-pass,
+  1-skip result.
 
 ### 19.2 Frontend Code Quality & Build Verification
 - **Oxlint:** Executed across all 50 TypeScript/React files. **Zero errors found**.
@@ -901,7 +928,7 @@ For future iterations and commercial deployment, the following enhancements are 
 
 The **Agentic AI Based Intelligent Enterprise Automation and Decision Support System** demonstrates a successful, secure paradigm for deploying artificial intelligence within enterprise operations. By coupling the cognitive routing and natural language synthesis of LangGraph multi-agent workflows with the deterministic execution of typed Python services, the platform eliminates hallucination risks while unlocking cross-departmental business intelligence.
 
-The implementation unifies Human Resources, Sales Operations, and Inventory Management, safeguards corporate policy documents via authorized RAG, enforces governance through two-phase human-in-the-loop approvals, and delivers quantitative clarity through empirical time-series forecasting. Phase 1 adds independent migration and provenance foundations, strict historical read-only access, and verified backup/restore tools. The legacy historical-sales table remains operationally co-located and source-specific benchmark ingestion is not implemented. Current full-suite results are 192 passed from both supported working directories, with Phase 1 foundation tests passing independently.
+The implementation unifies Human Resources, Sales Operations, and Inventory Management, safeguards corporate policy documents via authorized RAG, enforces governance through two-phase human-in-the-loop approvals, and delivers quantitative clarity through empirical time-series forecasting. Phase 1 adds independent migration and provenance foundations, strict historical read-only access, and verified backup/restore tools; Phase 2 adds a generic CSV/XLSX ingestion foundation without importing benchmark data. The legacy historical-sales table remains operationally co-located, and source-specific benchmark schemas and imports are not implemented. Current full-suite results are 213 passed and one platform-dependent symlink test skipped from both supported working directories; the Phase 1 and Phase 2 focused tests pass apart from that symlink case.
 
 ---
 
