@@ -76,3 +76,21 @@ Desktop.ini
 build_frontend_pages.py
 write_overview.py
 
+
+# ==========================================
+# Large Raw Datasets (Exceeding GitHub 100MB limit)
+# ==========================================
+data/dataco_supply_chain/
+data/m5_forecasting/
+data/online_retail_ii/
+data/ibm_hr_attrition/
+data/raw/*
+!data/raw/*/.gitkeep
+data/benchmarks/*
+!data/benchmarks/*/.gitkeep
+
+# ==========================================
+# Local Guides
+# ==========================================
+docs/CLOUD_DATABASE_SETUP_GUIDE.md
+docs/DATASETS_AND_INTEGRATION_GUIDE.md
