@@ -75,9 +75,9 @@ def import_dataco_products(
             logger.info("Dry-run mode: no changes committed to the database.")
             return {"total_extracted": len(products_map), "created": 0, "skipped": 0}
 
+        existing_skus = {s[0] for s in db.query(Product.sku).all()}
         for p_data in products_map.values():
-            existing = db.query(Product).filter_by(sku=p_data["sku"]).first()
-            if existing:
+            if p_data["sku"] in existing_skus:
                 skipped_count += 1
                 continue
 
@@ -93,22 +93,25 @@ def import_dataco_products(
                 is_active=True,
             )
             db.add(product)
-            db.flush()
-
-            # Record initial stock receipt movement
-            movement = StockMovement(
-                product_id=product.id,
-                movement_type=StockMovementType.IN.value,
-                quantity=product.quantity_on_hand,
-                previous_quantity=0,
-                new_quantity=product.quantity_on_hand,
-                reason="Initial import from DataCo Supply Chain dataset",
-                reference="IMPORT-DATACO",
-            )
-            db.add(movement)
             created_count += 1
 
         db.commit()
+
+        # Add initial stock movements for newly created products
+        if created_count > 0:
+            new_products = db.query(Product).filter(Product.sku.startswith("SKU-DCO-")).all()
+            for prod in new_products:
+                movement = StockMovement(
+                    product_id=prod.id,
+                    movement_type=StockMovementType.IN.value,
+                    quantity=prod.quantity_on_hand,
+                    previous_quantity=0,
+                    new_quantity=prod.quantity_on_hand,
+                    reason="Initial import from DataCo Supply Chain dataset",
+                    reference="IMPORT-DATACO",
+                )
+                db.add(movement)
+            db.commit()
         logger.info(
             "DataCo product import committed: %d created, %d skipped.",
             created_count,

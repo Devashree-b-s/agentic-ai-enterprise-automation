@@ -70,16 +70,22 @@ class Settings(BaseSettings):
     RAG_SIMILARITY_THRESHOLD: float = 0.35
 
     model_config = SettingsConfigDict(
-        env_file=BACKEND_DIR / ".env",
+        env_file=(BACKEND_DIR / ".env", PROJECT_ROOT / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
     @model_validator(mode="after")
     def resolve_database_paths(self) -> "Settings":
-        """Anchor relative SQLite database URLs to the project root."""
+        """Anchor relative SQLite database URLs to the project root and normalize Postgres URLs."""
         for field_name in ("DATABASE_URL", "HISTORICAL_DATABASE_URL"):
-            url = make_url(getattr(self, field_name))
+            raw_val = getattr(self, field_name)
+            if not raw_val:
+                continue
+            if raw_val.startswith("postgresql://"):
+                raw_val = "postgresql+psycopg2://" + raw_val[len("postgresql://"):]
+                setattr(self, field_name, raw_val)
+            url = make_url(raw_val)
             if not url.drivername.startswith("sqlite") or not url.database:
                 continue
             database = Path(url.database)
