@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.agent_runs import router as agent_runs_router
 from app.api.agents import router as agents_router
@@ -19,11 +20,23 @@ from app.api.inventory import router as inventory_router
 from app.api.predictions import router as predictions_router
 from app.api.sales import router as sales_router
 from app.core.config import settings
+from app.core.seed_demo_users import seed_demo_users
+from app.db.base import Base
+from app.db.session import SessionLocal, engine
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager; schema changes are applied through Alembic."""
+    """Application lifespan manager; ensures tables exist and demo users are seeded."""
+    try:
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        try:
+            seed_demo_users(db)
+        finally:
+            db.close()
+    except (SQLAlchemyError, RuntimeError, OSError) as exc:
+        logging.getLogger("app.main").warning("Startup database initialization: %s", exc)
     yield
 
 

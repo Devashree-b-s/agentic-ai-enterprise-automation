@@ -1,7 +1,7 @@
 """Authentication and user management business service."""
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password, verify_password
@@ -20,8 +20,8 @@ class AuthService:
 
     @staticmethod
     def get_by_email(db: Session, email: str) -> User | None:
-        """Fetch a user by unique email address."""
-        stmt = select(User).where(User.email == email)
+        """Fetch a user by unique email address (case-insensitive)."""
+        stmt = select(User).where(func.lower(User.email) == email.strip().lower())
         return db.scalar(stmt)
 
     @staticmethod

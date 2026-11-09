@@ -36,10 +36,24 @@ export const useAuthStore = create<AuthState>((set) => ({
       })
     } catch (err: unknown) {
       let message = 'Failed to sign in. Please verify your email and password.'
-      if (err && typeof err === 'object' && 'response' in err) {
-        const res = (err as { response?: { data?: { detail?: string } } }).response
-        if (res?.data?.detail) {
-          message = res.data.detail
+      if (err && typeof err === 'object') {
+        const axiosErr = err as {
+          response?: { data?: { detail?: string }; status?: number }
+          message?: string
+          code?: string
+        }
+        if (axiosErr.response?.data?.detail) {
+          message = axiosErr.response.data.detail
+        } else if (
+          axiosErr.code === 'ERR_NETWORK' ||
+          axiosErr.code === 'ECONNREFUSED' ||
+          axiosErr.message?.includes('Network Error')
+        ) {
+          message =
+            'Cannot connect to backend API server. Please ensure the backend is running on http://127.0.0.1:8000.'
+        } else if (axiosErr.response?.status === 500) {
+          message =
+            'Internal server error during authentication. Please check backend logs.'
         }
       }
       set({ error: message, isLoading: false })

@@ -44,14 +44,15 @@ export const LoginPage: React.FC = () => {
 
   // Helper demo accounts for fast pairing and review
   const demoAccounts = [
-    { label: 'Admin', email: 'admin@enterprise.com', role: 'System Admin' },
-    { label: 'Manager', email: 'manager@enterprise.com', role: 'Sales & Inventory' },
-    { label: 'HR User', email: 'hr@enterprise.com', role: 'Staffing & Leaves' },
-    { label: 'Employee', email: 'employee@enterprise.com', role: 'Staff Access' },
+    { label: 'Admin', email: 'admin@enterprise.com', role: 'System Admin', password: 'Admin@123' },
+    { label: 'Manager', email: 'manager@enterprise.com', role: 'Sales & Inventory', password: 'Admin@123' },
+    { label: 'HR User', email: 'hr@enterprise.com', role: 'Staffing & Leaves', password: 'Admin@123' },
+    { label: 'Employee', email: 'employee@enterprise.com', role: 'Staff Access', password: 'Admin@123' },
   ]
 
-  const fillDemo = (demoEmail: string) => {
+  const fillDemo = (demoEmail: string, demoPassword = 'Admin@123') => {
     setEmail(demoEmail)
+    setPassword(demoPassword)
     setLocalError(null)
   }
 
@@ -159,7 +160,7 @@ export const LoginPage: React.FC = () => {
                 <button
                   key={acc.email}
                   type="button"
-                  onClick={() => fillDemo(acc.email)}
+                  onClick={() => fillDemo(acc.email, acc.password)}
                   className="text-left p-2.5 rounded-lg bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer group"
                 >
                   <div className="text-xs font-medium text-slate-200 group-hover:text-indigo-300">
@@ -172,7 +173,7 @@ export const LoginPage: React.FC = () => {
               ))}
             </div>
             <p className="text-[11px] text-slate-400 text-center mt-3 m-0">
-              Select an account role above to pre-fill the email identifier
+              Click any role above to pre-fill credentials (Password: <span className="text-indigo-300 font-mono">Admin@123</span>)
             </p>
           </div>
         </div>

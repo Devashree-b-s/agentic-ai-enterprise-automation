@@ -8,22 +8,17 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 
-# Engine connection arguments & pooling
-engine_kwargs: dict = {"echo": False}
+# For SQLite, check_same_thread must be False because FastAPI handles
+# requests across multiple threads in its thread pool.
+connect_args = {}
 if settings.DATABASE_URL.startswith("sqlite"):
-    # SQLite requires check_same_thread=False for FastAPI concurrency
-    engine_kwargs["connect_args"] = {"check_same_thread": False}
-else:
-    # Cloud PostgreSQL (Neon.tech / Supabase)
-    # pool_pre_ping checks connection health before queries to prevent dropped connection errors
-    # pool_recycle recycles connections periodically to handle serverless idle timeouts
-    engine_kwargs["pool_pre_ping"] = True
-    engine_kwargs["pool_recycle"] = 300
+    connect_args["check_same_thread"] = False
 
 # Create the database engine
 engine = create_engine(
     settings.DATABASE_URL,
-    **engine_kwargs,
+    connect_args=connect_args,
+    echo=False,  # Set to True when debugging raw SQL queries
 )
 
 # Enforce foreign key constraints on all SQLite connections
