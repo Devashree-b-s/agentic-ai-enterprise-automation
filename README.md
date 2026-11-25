@@ -510,12 +510,11 @@ provided through `DATABASE_URL` are anchored to the active project root. For a f
 installation, create the operational schema with Alembic. For an existing V1 database,
 validate its schema before stamping the initial baseline; never stamp an unvalidated DB:
 
-The active operational database has been validated and upgraded through revision
-`a20d5b9e8f41`; its provenance registry is empty. `data/historical.db` remains
-uninitialized by design, and normal application startup does not create it.
-Phase 2 adds forward-only ingestion tracking revisions; they have not been applied
-to the project operational database. Apply migrations explicitly to the intended
-database before configuring an ingestion target.
+Normal application startup does not create or upgrade either database. Always
+apply migrations to the database selected by `DATABASE_URL` before starting the
+backend; an empty SQLite file is not an initialized database. `data/historical.db`
+remains uninitialized by design. Apply operational migrations explicitly to the
+intended database before configuring an ingestion target.
 
 ```powershell
 # Run from the project root.
@@ -542,8 +541,11 @@ Set-Location ..
 .\.venv\Scripts\python.exe backend/app/core/import_sales.py
 
 # 4. Bootstrap the Initial Administrator Account
-# You will be prompted securely for an email and password via interactive input
-.\.venv\Scripts\python.exe -m app.core.bootstrap
+# Run from backend so Python can resolve the app package.
+# You will be prompted securely for an email and password via interactive input.
+Set-Location backend
+..\.venv\Scripts\python.exe -m app.core.bootstrap
+Set-Location ..
 ```
 
 Restore a verified backup only to a new destination file (the destination must not
